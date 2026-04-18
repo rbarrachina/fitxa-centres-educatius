@@ -113,6 +113,14 @@
             return "";
         return raw;
     }
+    function normalizeText(value) {
+        return String(value || "")
+            .normalize("NFD")
+            .replaceAll(/[\u0300-\u036f]/g, "")
+            .replaceAll(/\s+/g, " ")
+            .trim()
+            .toLowerCase();
+    }
     function asText(value) {
         if (value === null || value === undefined)
             return "";
@@ -153,6 +161,55 @@
             return bScore - aScore;
         });
         return sorted[0];
+    }
+    function dedupeByCode(rows) {
+        const byCode = new Map();
+        rows.forEach((row) => {
+            const code = asText(row.codi_centre);
+            if (!code)
+                return;
+            const current = byCode.get(code);
+            if (!current) {
+                byCode.set(code, row);
+                return;
+            }
+            const currentRank = [toInt(current.any), toInt(current.curs)];
+            const newRank = [toInt(row.any), toInt(row.curs)];
+            if (newRank[0] > currentRank[0] || (newRank[0] === currentRank[0] && newRank[1] >= currentRank[1])) {
+                byCode.set(code, { ...current, ...row });
+            }
+            else {
+                byCode.set(code, { ...row, ...current });
+            }
+        });
+        return Array.from(byCode.values());
+    }
+    function sortRowsByNameRelevance(rows, query) {
+        const needle = normalizeText(query);
+        const ranked = [...rows].sort((a, b) => {
+            const aName = normalizeText(asText(a.denominaci_completa));
+            const bName = normalizeText(asText(b.denominaci_completa));
+            const score = (name) => {
+                if (name === needle)
+                    return 3;
+                if (name.startsWith(needle))
+                    return 2;
+                if (name.includes(needle))
+                    return 1;
+                return 0;
+            };
+            const sa = score(aName);
+            const sb = score(bName);
+            if (sb !== sa)
+                return sb - sa;
+            const am = normalizeText(asText(a.nom_municipi));
+            const bm = normalizeText(asText(b.nom_municipi));
+            const byName = aName.localeCompare(bName, "ca");
+            if (byName !== 0)
+                return byName;
+            return am.localeCompare(bm, "ca");
+        });
+        return ranked;
     }
     function rowToOrderedFields(row) {
         const fields = {};
@@ -308,6 +365,8 @@
             const codeInput = byId("code");
             const loadButton = byId("load");
             const messageEl = byId("message");
+            const fitxaMatchesWrap = byId("fitxaMatchesWrap");
+            const fitxaMatches = byId("fitxaMatches");
             const metaEl = byId("meta");
             const resultTable = byId("resultTable");
             const resultBody = byId("resultBody");
@@ -396,33 +455,80 @@
                 metaEl.classList.remove("hidden");
                 metaEl.textContent = `Font: ${data.source_url || "-"} | Estat: ${data.status}`;
             };
+            const hideMatchChooser = () => {
+                fitxaMatchesWrap.classList.add("hidden");
+                fitxaMatches.innerHTML = "";
+            };
+            const renderMatchChooser = (rows) => {
+                fitxaMatchesWrap.classList.remove("hidden");
+                fitxaMatches.innerHTML = rows
+                    .map((row) => {
+                    const code = escapeHtml(asText(row.codi_centre) || "-");
+                    const name = escapeHtml(asText(row.denominaci_completa) || "-");
+                    const town = escapeHtml(asText(row.nom_municipi) || "-");
+                    return ('<div class="match-row">' +
+                        `<span><span class="match-name">${code} - ${name}</span> <span class="match-town">(${town})</span></span>` +
+                        `<button class="match-view-btn fitxa-pick-btn" type="button" data-code="${code}">Tria</button>` +
+                        "</div>");
+                })
+                    .join("");
+            };
             const fetchFitxaFromSocrata = async (code) => {
                 const whereClause = `codi_centre = '${escapeSoql(code)}'`;
                 const rows = await fetchSocrataRows(whereClause, 5);
                 return rowToFitxaData(code, pickBestRow(rows));
             };
+            const searchFitxaByNameFromSocrata = async (name) => {
+                const whereClause = `denominaci_completa IS NOT NULL AND upper(denominaci_completa) like upper('%${escapeSoql(name)}%')`;
+                const rows = await fetchSocrataRows(whereClause, 120);
+                return sortRowsByNameRelevance(dedupeByCode(rows), name);
+            };
             const loadCentre = async () => {
-                const code = codeInput.value.trim();
+                const query = codeInput.value.trim();
                 setMessage("Carregant dades...");
+                hideMatchChooser();
                 resultTable.classList.add("hidden");
                 metaEl.classList.add("hidden");
-                if (!/^\d{8}$/.test(code)) {
-                    setMessage("El codi ha de tenir 8 digits.", true);
+                if (!query) {
+                    setMessage("Has d'indicar el codi o nom del centre.", true);
                     return;
                 }
+                const isCodeSearch = /^\d{8}$/.test(query);
                 loadButton.disabled = true;
                 try {
-                    if (!apiBase) {
-                        const data = await fetchFitxaFromSocrata(code);
-                        if (data.status !== "ok") {
-                            setMessage(data.message || "No s'ha pogut carregar el centre.", true);
-                            return;
-                        }
-                        renderData(data);
-                        setMessage("Dades carregades correctament.");
+                    if (!isCodeSearch && apiBase) {
+                        setMessage("Amb backend extern, la fitxa per nom no està activada. Introdueix un codi de centre.", true);
                         return;
                     }
-                    const response = await fetch(apiUrl(`api/centre/${code}`));
+                    if (!apiBase) {
+                        if (isCodeSearch) {
+                            const data = await fetchFitxaFromSocrata(query);
+                            if (data.status !== "ok") {
+                                setMessage(data.message || "No s'ha pogut carregar el centre.", true);
+                                return;
+                            }
+                            renderData(data);
+                            setMessage("Dades carregades correctament.");
+                            return;
+                        }
+                        const matches = await searchFitxaByNameFromSocrata(query);
+                        if (!matches.length) {
+                            setMessage("No s'ha trobat cap centre amb aquest nom.", true);
+                            return;
+                        }
+                        if (matches.length === 1) {
+                            const selected = matches[0];
+                            const code = asText(selected.codi_centre);
+                            const data = rowToFitxaData(code, selected);
+                            renderData(data);
+                            setMessage("Dades carregades correctament.");
+                            return;
+                        }
+                        renderMatchChooser(matches);
+                        setMessage(`S'han trobat ${matches.length} centres. Tria'n un.`);
+                        return;
+                    }
+                    const response = await fetch(apiUrl(`api/centre/${query}`));
                     const raw = await response.text();
                     let data = null;
                     try {
@@ -484,6 +590,35 @@
                 if (!openUrl)
                     return;
                 window.open(openUrl, "_blank", "noopener,noreferrer");
+            });
+            fitxaMatches.addEventListener("click", async (event) => {
+                const target = event.target;
+                const pickButton = target.closest(".fitxa-pick-btn");
+                if (!pickButton)
+                    return;
+                const selectedCode = asText(pickButton.dataset.code);
+                if (!selectedCode)
+                    return;
+                setMessage("Carregant centre seleccionat...");
+                hideMatchChooser();
+                resultTable.classList.add("hidden");
+                metaEl.classList.add("hidden");
+                loadButton.disabled = true;
+                try {
+                    const data = await fetchFitxaFromSocrata(selectedCode);
+                    if (data.status !== "ok") {
+                        setMessage("No s'ha pogut carregar el centre seleccionat.", true);
+                        return;
+                    }
+                    renderData(data);
+                    setMessage("Centre seleccionat correctament.");
+                }
+                catch (error) {
+                    setMessage(`Error de connexio: ${error.message}`, true);
+                }
+                finally {
+                    loadButton.disabled = false;
+                }
             });
             codeInput.addEventListener("keydown", (event) => {
                 if (event.key === "Enter")

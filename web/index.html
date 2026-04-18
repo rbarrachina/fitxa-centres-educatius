@@ -387,14 +387,18 @@
     </nav>
 
     <section id="sectionFitxa">
-      <p>Introdueix el codi de centre (8 digits) per carregar tota la informacio disponible de la fitxa oficial.</p>
+      <p>Introdueix el codi de centre (8 digits) o el nom del centre per carregar tota la informacio disponible de la fitxa oficial.</p>
 
       <div class="controls">
-        <input id="code" type="text" maxlength="8" placeholder="Ex: 08019472" inputmode="numeric" />
+        <input id="code" type="text" placeholder="Ex: 08019472 o Institut XXV Olímpiada" />
         <button id="load">Carregar centre</button>
       </div>
 
       <div id="message" class="message"></div>
+      <div id="fitxaMatchesWrap" class="hidden">
+        <div class="meta">Coincidencies trobades:</div>
+        <div id="fitxaMatches" class="match-list"></div>
+      </div>
       <div id="meta" class="meta hidden"></div>
 
       <table id="resultTable" class="hidden">
