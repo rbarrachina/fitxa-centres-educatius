@@ -42,8 +42,10 @@ Obre `http://127.0.0.1:8000` al navegador.
 
 ## GitHub Pages (estat actual)
 
-- La part visual (`web/`) es pot publicar a GitHub Pages.
-- Les crides `api/...` no funcionaran a Pages perquè el backend `FastAPI` (Python) no s'executa a GitHub Pages.
+- La part visual (`web/`) es publica a GitHub Pages.
+- En mode Pages, l'app funciona en mode estàtic llegint `web/data/centres.json`.
+- El fitxer estàtic es regenera al workflow (`scripts/build_static_data.py`) des del dataset obert `kvmv-ahh4`.
+- Si configures `window.MAPES_API_BASE` a `web/index.html`, l'app torna a usar backend en viu (`api/...`).
 
 ## Estructura
 

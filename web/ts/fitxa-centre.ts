@@ -11,9 +11,28 @@
   type MapesWindow = Window & {
     FitxaCentre?: FitxaApi;
     MapesMapModal?: MapModalApi;
+    MAPES_API_BASE?: string;
+    StaticCentres?: {
+      byCode: (code: string) => Promise<any | null>;
+      sourceUrl: () => Promise<string>;
+    };
   };
 
   const win = window as MapesWindow;
+  const apiBase = String(win.MAPES_API_BASE || "").trim().replace(/\/+$/, "");
+
+  function apiUrl(path: string): string {
+    const normalizedPath = path.replace(/^\/+/, "");
+    return apiBase ? `${apiBase}/${normalizedPath}` : normalizedPath;
+  }
+
+  function buildNoJsonMessage(): string {
+    const isGithubPages = window.location.hostname.endsWith("github.io");
+    if (isGithubPages && !apiBase) {
+      return "A GitHub Pages falta backend. Defineix window.MAPES_API_BASE amb l'URL del backend (Render/Railway).";
+    }
+    return "El servidor ha retornat HTML en lloc de JSON.";
+  }
 
   function byId<T extends HTMLElement>(id: string): T {
     return document.getElementById(id) as T;
@@ -175,6 +194,51 @@
         metaEl.textContent = `Font: ${data.source_url || "-"} | Estat: ${data.status}`;
       };
 
+      const buildStaticFitxaResult = async (code: string): Promise<any> => {
+        if (!win.StaticCentres) {
+          return {
+            status: "not_found",
+            requested_code: code,
+            message: "No s'ha trobat el mòdul de dades estàtiques.",
+            fields: {},
+          };
+        }
+
+        const sourceUrl = await win.StaticCentres.sourceUrl();
+        const centre = await win.StaticCentres.byCode(code);
+        if (!centre) {
+          return {
+            status: "not_found",
+            requested_code: code,
+            source_url: sourceUrl,
+            message: "No s'ha trobat cap centre amb aquest codi al dataset estàtic.",
+            fields: {},
+          };
+        }
+
+        const fields: Record<string, string> = {
+          Població: centre.municipi || "-",
+          "Correu electrònic del centre": centre.mail || "-",
+          "Telèfon del centre": centre.phone || "-",
+          "URL pàgina web centre": centre.web || "-",
+          "Àrea Territorial": centre.territorial_area_st || "-",
+          Naturalesa: centre.naturalesa || "-",
+          Adreça: centre.address || "-",
+        };
+        if (centre.coord_x && centre.coord_y) {
+          fields.Coordenades = `${centre.coord_x} X | ${centre.coord_y} Y`;
+        }
+
+        return {
+          status: "ok",
+          requested_code: code,
+          source_url: sourceUrl,
+          centre: { code: centre.code || code, name: centre.name || "-" },
+          coordinates: { x: centre.coord_x || "", y: centre.coord_y || "" },
+          fields,
+        };
+      };
+
       const loadCentre = async (): Promise<void> => {
         const code = codeInput.value.trim();
         setMessage("Carregant dades...");
@@ -188,8 +252,30 @@
 
         loadButton.disabled = true;
         try {
-          const response = await fetch(`api/centre/${code}`);
-          const data = await response.json();
+          if (!apiBase) {
+            const data = await buildStaticFitxaResult(code);
+            if (data.status !== "ok") {
+              setMessage(data.message || "No s'ha pogut carregar el centre.", true);
+              return;
+            }
+            renderData(data);
+            setMessage("Dades carregades correctament (mode estàtic).");
+            return;
+          }
+
+          const response = await fetch(apiUrl(`api/centre/${code}`));
+          const raw = await response.text();
+          let data: any = null;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            if (raw.trim().startsWith("<!DOCTYPE") || raw.trim().startsWith("<html")) {
+              setMessage(buildNoJsonMessage(), true);
+            } else {
+              setMessage("Resposta no valida del servidor (no JSON).", true);
+            }
+            return;
+          }
           if (!response.ok) {
             setMessage(data.message || "No s'ha pogut carregar el centre.", true);
             return;

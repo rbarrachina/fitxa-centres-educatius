@@ -1,9 +1,34 @@
 (() => {
   type MapaApi = { init: () => void };
   type MapModalApi = { openByUtm: (xValue: string, yValue: string) => void; close: () => void };
-  type MapesWindow = Window & { MapaEscolar?: MapaApi; MapesMapModal?: MapModalApi };
+  type MapesWindow = Window & {
+    MapaEscolar?: MapaApi;
+    MapesMapModal?: MapModalApi;
+    MAPES_API_BASE?: string;
+    StaticCentres?: {
+      load: () => Promise<any[]>;
+      search: (query: string) => any[];
+      byCode: (code: string) => Promise<any | null>;
+      sourceUrl: () => Promise<string>;
+      normalize: (value: string) => string;
+    };
+  };
 
   const win = window as MapesWindow;
+  const apiBase = String(win.MAPES_API_BASE || "").trim().replace(/\/+$/, "");
+
+  function apiUrl(path: string): string {
+    const normalizedPath = path.replace(/^\/+/, "");
+    return apiBase ? `${apiBase}/${normalizedPath}` : normalizedPath;
+  }
+
+  function buildNoJsonMessage(): string {
+    const isGithubPages = window.location.hostname.endsWith("github.io");
+    if (isGithubPages && !apiBase) {
+      return "A GitHub Pages falta backend. Defineix window.MAPES_API_BASE amb l'URL del backend (Render/Railway).";
+    }
+    return "El servidor ha retornat HTML en lloc de JSON.";
+  }
 
   function byId<T extends HTMLElement>(id: string): T {
     return document.getElementById(id) as T;
@@ -199,6 +224,29 @@
         renderMatchesList(selectedCode);
       };
 
+      const fromStaticCentre = (centre: any, matches: any[] = []): any => ({
+        status: centre ? "ok" : "not_found",
+        code: centre?.code || "",
+        matched_name: centre?.name || null,
+        matched_municipi: centre?.municipi || null,
+        details: {
+          mail: centre?.mail || null,
+          phone: centre?.phone || null,
+          web: centre?.web || null,
+          coord_x: centre?.coord_x || null,
+          coord_y: centre?.coord_y || null,
+          territorial_area_st: centre?.territorial_area_st || null,
+          naturalesa: centre?.naturalesa || null,
+        },
+        total_matches: matches.length || (centre ? 1 : 0),
+        matches: matches.map((item) => ({
+          code: item.code,
+          name: item.name,
+          municipi: item.municipi,
+          address: item.address,
+        })),
+      });
+
       const searchCentre = async (): Promise<void> => {
         const query = (input.value || "").trim();
         clearResult();
@@ -213,11 +261,48 @@
         button.disabled = true;
 
         try {
+          if (!apiBase) {
+            if (!win.StaticCentres) {
+              setMessage("No s'ha trobat el mòdul de dades estàtiques.", true);
+              return;
+            }
+
+            await win.StaticCentres.load();
+            if (isCodeSearch) {
+              const centre = await win.StaticCentres.byCode(query);
+              if (!centre) {
+                setMessage("No s'ha trobat cap centre amb aquest codi.", true);
+                return;
+              }
+              currentMatches = [{ code: centre.code, name: centre.name, municipi: centre.municipi }];
+              renderSelectedResult(fromStaticCentre(centre, [centre]));
+              setMessage("Centre trobat correctament (mode estàtic).");
+              return;
+            }
+
+            const matches = win.StaticCentres.search(query);
+            if (!matches.length) {
+              setMessage("No s'ha trobat cap centre amb aquest nom.", true);
+              return;
+            }
+
+            currentMatches = matches.map((item) => ({ code: item.code, name: item.name, municipi: item.municipi }));
+            if (matches.length > 1) {
+              renderChooserOnly();
+              setMessage(`S'han trobat ${matches.length} coincidencies. Tria el centre de la llista.`);
+              return;
+            }
+
+            renderSelectedResult(fromStaticCentre(matches[0], matches));
+            setMessage("Centre trobat correctament (mode estàtic).");
+            return;
+          }
+
           const endpoint = isCodeSearch
             ? `api/mapa-escolar/detall?codi=${encodeURIComponent(query)}`
             : `api/mapa-escolar/codi?nom=${encodeURIComponent(query)}`;
 
-          const response = await fetch(endpoint);
+          const response = await fetch(apiUrl(endpoint));
           const raw = await response.text();
 
           let data: any = null;
@@ -225,7 +310,7 @@
             data = JSON.parse(raw);
           } catch {
             if (raw.trim().startsWith("<!DOCTYPE") || raw.trim().startsWith("<html")) {
-              setMessage("El servidor ha retornat HTML en lloc de JSON. Reinicia amb: python3 server.py --host 127.0.0.1 --port 8000", true);
+              setMessage(buildNoJsonMessage(), true);
             } else {
               setMessage("Resposta no valida del servidor (no JSON).", true);
             }
@@ -270,8 +355,34 @@
         button.disabled = true;
 
         try {
-          const response = await fetch(`api/mapa-escolar/detall?codi=${encodeURIComponent(selectedCode)}`);
-          const data = await response.json();
+          if (!apiBase) {
+            if (!win.StaticCentres) {
+              setMessage("No s'ha trobat el mòdul de dades estàtiques.", true);
+              return;
+            }
+            const centre = await win.StaticCentres.byCode(selectedCode);
+            if (!centre) {
+              setMessage("No s'ha pogut carregar el centre seleccionat.", true);
+              return;
+            }
+            renderSelectedResult(fromStaticCentre(centre, currentMatches));
+            setMessage("Centre seleccionat correctament (mode estàtic).");
+            return;
+          }
+
+          const response = await fetch(apiUrl(`api/mapa-escolar/detall?codi=${encodeURIComponent(selectedCode)}`));
+          const raw = await response.text();
+          let data: any = null;
+          try {
+            data = JSON.parse(raw);
+          } catch {
+            if (raw.trim().startsWith("<!DOCTYPE") || raw.trim().startsWith("<html")) {
+              setMessage(buildNoJsonMessage(), true);
+            } else {
+              setMessage("Resposta no valida del servidor (no JSON).", true);
+            }
+            return;
+          }
           if (!response.ok) {
             setMessage(data.message || "No s'ha pogut carregar el centre seleccionat.", true);
             return;
