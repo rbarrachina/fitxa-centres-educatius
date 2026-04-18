@@ -442,13 +442,9 @@
 
       const row = (label: string, value: string): string => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
 
-      const buildCodeRow = (codeValue: string, sourceUrl: string): string => {
+      const buildCodeRow = (codeValue: string): string => {
         const codeSafe = escapeHtml(codeValue || "");
-        const urlSafe = escapeHtml(sourceUrl || "");
-        const webButton = sourceUrl
-          ? `<button class="web-btn" type="button" data-source-url="${urlSafe}">Web</button>`
-          : "";
-        return `<tr><th>Codi centre</th><td><div class="coord-with-map"><span>${codeSafe}</span>${webButton}</div></td></tr>`;
+        return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
       };
 
       const buildCoordinateRow = (coordText: string, xValue: string, yValue: string): string => {
@@ -489,11 +485,38 @@
       };
 
       const renderData = (data: any): void => {
-        const fields = data.fields || {};
+        const fields = { ...(data.fields || {}) };
         const rows: string[] = [];
 
-        rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || "", data.source_url || ""));
+        const pullFieldByLabel = (labels: string[]): string => {
+          for (const label of labels) {
+            if (!(label in fields)) continue;
+            const value = fields[label];
+            delete fields[label];
+            if (Array.isArray(value)) {
+              return value.map((v) => String(v ?? "")).join(" | ");
+            }
+            return String(value ?? "");
+          }
+          return "";
+        };
+
+        const emailValue = pullFieldByLabel([
+          "Correu electrònic del centre",
+          "Correu electrònic departamental",
+          "Correu electronic del centre",
+        ]);
+        const webValue = pullFieldByLabel([
+          "URL pàgina web centre",
+          "URL pagina web centre",
+          "Web",
+          "URL",
+        ]);
+
+        rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || ""));
         rows.push(row("Nom centre", (data.centre && data.centre.name) || ""));
+        rows.push(row("Correu electrònic del centre", emailValue || "-"));
+        rows.push(row("URL pàgina web centre", webValue || "-"));
 
         if (data.coordinates && data.coordinates.x && data.coordinates.y) {
           const coordText = fields.Coordenades || `${data.coordinates.x} X | ${data.coordinates.y} Y`;

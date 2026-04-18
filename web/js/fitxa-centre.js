@@ -403,13 +403,9 @@
                 return escaped;
             };
             const row = (label, value) => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
-            const buildCodeRow = (codeValue, sourceUrl) => {
+            const buildCodeRow = (codeValue) => {
                 const codeSafe = escapeHtml(codeValue || "");
-                const urlSafe = escapeHtml(sourceUrl || "");
-                const webButton = sourceUrl
-                    ? `<button class="web-btn" type="button" data-source-url="${urlSafe}">Web</button>`
-                    : "";
-                return `<tr><th>Codi centre</th><td><div class="coord-with-map"><span>${codeSafe}</span>${webButton}</div></td></tr>`;
+                return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
             };
             const buildCoordinateRow = (coordText, xValue, yValue) => {
                 const coordSafe = escapeHtml(coordText || "");
@@ -443,10 +439,36 @@
                 close: () => closeMapModal(),
             };
             const renderData = (data) => {
-                const fields = data.fields || {};
+                const fields = { ...(data.fields || {}) };
                 const rows = [];
-                rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || "", data.source_url || ""));
+                const pullFieldByLabel = (labels) => {
+                    for (const label of labels) {
+                        if (!(label in fields))
+                            continue;
+                        const value = fields[label];
+                        delete fields[label];
+                        if (Array.isArray(value)) {
+                            return value.map((v) => String(v ?? "")).join(" | ");
+                        }
+                        return String(value ?? "");
+                    }
+                    return "";
+                };
+                const emailValue = pullFieldByLabel([
+                    "Correu electrònic del centre",
+                    "Correu electrònic departamental",
+                    "Correu electronic del centre",
+                ]);
+                const webValue = pullFieldByLabel([
+                    "URL pàgina web centre",
+                    "URL pagina web centre",
+                    "Web",
+                    "URL",
+                ]);
+                rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || ""));
                 rows.push(row("Nom centre", (data.centre && data.centre.name) || ""));
+                rows.push(row("Correu electrònic del centre", emailValue || "-"));
+                rows.push(row("URL pàgina web centre", webValue || "-"));
                 if (data.coordinates && data.coordinates.x && data.coordinates.y) {
                     const coordText = fields.Coordenades || `${data.coordinates.x} X | ${data.coordinates.y} Y`;
                     rows.push(buildCoordinateRow(coordText, data.coordinates.x, data.coordinates.y));
