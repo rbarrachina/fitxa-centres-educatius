@@ -75,6 +75,14 @@
                 return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" type="button">Copiar</button></div>`;
             };
             const row = (label, value) => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
+            const buildCodeRow = (codeValue, sourceUrl) => {
+                const codeSafe = escapeHtml(codeValue || "");
+                const urlSafe = escapeHtml(sourceUrl || "");
+                const webButton = sourceUrl
+                    ? `<button class="web-btn" type="button" data-source-url="${urlSafe}">Web</button>`
+                    : "";
+                return `<tr><th>Codi centre</th><td><div class="coord-with-map"><span>${codeSafe}</span>${webButton}</div></td></tr>`;
+            };
             const buildCoordinateRow = (coordText, xValue, yValue) => {
                 const coordSafe = escapeHtml(coordText || "");
                 const xSafe = escapeHtml(xValue || "");
@@ -109,7 +117,7 @@
             const renderData = (data) => {
                 const fields = data.fields || {};
                 const rows = [];
-                rows.push(row("Codi centre", (data.centre && data.centre.code) || data.requested_code || ""));
+                rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || "", data.source_url || ""));
                 rows.push(row("Nom centre", (data.centre && data.centre.name) || ""));
                 if (data.coordinates && data.coordinates.x && data.coordinates.y) {
                     const coordText = fields.Coordenades || `${data.coordinates.x} X | ${data.coordinates.y} Y`;
@@ -180,9 +188,17 @@
                     return;
                 }
                 const mapButton = target.closest(".map-btn");
-                if (!mapButton)
+                if (mapButton) {
+                    openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "");
                     return;
-                openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "");
+                }
+                const webButton = target.closest(".web-btn");
+                if (!webButton)
+                    return;
+                const sourceUrl = webButton.dataset.sourceUrl || "";
+                if (!sourceUrl)
+                    return;
+                window.open(sourceUrl, "_blank", "noopener,noreferrer");
             });
             codeInput.addEventListener("keydown", (event) => {
                 if (event.key === "Enter")

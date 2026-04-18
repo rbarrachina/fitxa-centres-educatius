@@ -105,6 +105,15 @@
 
       const row = (label: string, value: string): string => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
 
+      const buildCodeRow = (codeValue: string, sourceUrl: string): string => {
+        const codeSafe = escapeHtml(codeValue || "");
+        const urlSafe = escapeHtml(sourceUrl || "");
+        const webButton = sourceUrl
+          ? `<button class="web-btn" type="button" data-source-url="${urlSafe}">Web</button>`
+          : "";
+        return `<tr><th>Codi centre</th><td><div class="coord-with-map"><span>${codeSafe}</span>${webButton}</div></td></tr>`;
+      };
+
       const buildCoordinateRow = (coordText: string, xValue: string, yValue: string): string => {
         const coordSafe = escapeHtml(coordText || "");
         const xSafe = escapeHtml(xValue || "");
@@ -146,7 +155,7 @@
         const fields = data.fields || {};
         const rows: string[] = [];
 
-        rows.push(row("Codi centre", (data.centre && data.centre.code) || data.requested_code || ""));
+        rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || "", data.source_url || ""));
         rows.push(row("Nom centre", (data.centre && data.centre.name) || ""));
 
         if (data.coordinates && data.coordinates.x && data.coordinates.y) {
@@ -221,8 +230,16 @@
         }
 
         const mapButton = target.closest(".map-btn") as HTMLButtonElement | null;
-        if (!mapButton) return;
-        openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "");
+        if (mapButton) {
+          openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "");
+          return;
+        }
+
+        const webButton = target.closest(".web-btn") as HTMLButtonElement | null;
+        if (!webButton) return;
+        const sourceUrl = webButton.dataset.sourceUrl || "";
+        if (!sourceUrl) return;
+        window.open(sourceUrl, "_blank", "noopener,noreferrer");
       });
 
       codeInput.addEventListener("keydown", (event: KeyboardEvent) => {
