@@ -1,28 +1,50 @@
 # Mapes de centres educatius
 
-Aplicacio amb backend `FastAPI` i frontend en `TypeScript` per consultar centres educatius.
+Aplicació per consultar informació de centres educatius de Catalunya.
+
+## Estat actual del projecte
+
+El mode principal és **estàtic**:
+- la web publicada a GitHub Pages carrega dades en viu des de l'API oberta `kvmv-ahh4` (Socrata),
+- es pot cercar per codi o per nom de centre,
+- si hi ha múltiples resultats, es mostra un llistat per triar.
+
+També hi ha un backend `FastAPI` **opcional** per a mode servidor.
 
 ## Requisits
 
+- Node.js 18+ (recomanat 20+)
+
+Opcional, només si vols backend:
 - Python 3.10+
-- Node.js 18+
 
-## Instal·lació
+## Desenvolupament frontend (mode estàtic)
+
+Instal·la dependències i compila:
 
 ```bash
-pip install -r requirements.txt
 npm install
-```
-
-## Compilar frontend TypeScript
-
-```bash
 npm run build
 ```
 
-## Executar servidor (FastAPI)
+Per provar-ho en local com a web estàtica:
 
 ```bash
+python3 -m http.server 8000
+```
+
+Obre: `http://127.0.0.1:8000/web/`
+
+## GitHub Pages
+
+El workflow publica el directori `web/` a GitHub Pages i compila TypeScript abans del deploy.
+
+## Backend opcional (FastAPI)
+
+Si vols usar backend propi:
+
+```bash
+pip install -r requirements.txt
 python3 server.py --host 127.0.0.1 --port 8000
 ```
 
@@ -32,22 +54,15 @@ Mode desenvolupament (autoreload):
 python3 server.py --host 127.0.0.1 --port 8000 --reload
 ```
 
-Obre `http://127.0.0.1:8000` al navegador.
-
-## API
-
+API disponible:
 - `GET /api/centre/{codi}`
 
-## GitHub Pages (estat actual)
-
-- La part visual (`web/`) es publica a GitHub Pages.
-- En mode Pages, les cerques es fan en viu contra l'API de dades obertes `kvmv-ahh4`.
-- Si configures `window.MAPES_API_BASE` a `web/index.html`, l'app usa el backend (`api/...`) en lloc de consultar directament dades obertes.
+Per forçar el frontend a usar backend, configura `window.MAPES_API_BASE` a `web/index.html`.
 
 ## Estructura
 
-- `main.py`: app `FastAPI` (API + fitxers estàtics)
-- `server.py`: llançador de `uvicorn`
-- `scraper.py`: extracció de dades de centres
-- `web/ts/*.ts`: codi font TypeScript del frontend
-- `web/js/*.js`: JavaScript compilat
+- `web/index.html`: interfície principal.
+- `web/ts/fitxa-centre.ts`: lògica frontend (cerca, llistat, render, popup mapa).
+- `web/js/fitxa-centre.js`: JavaScript compilat des de TypeScript.
+- `main.py`, `server.py`, `scraper.py`: backend opcional.
+- `.github/workflows/pages.yml`: build i desplegament de GitHub Pages.
