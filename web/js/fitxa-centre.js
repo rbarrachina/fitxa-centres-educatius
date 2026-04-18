@@ -657,4 +657,9 @@
             codeInput.value = "08019472";
         },
     };
+    document.addEventListener("DOMContentLoaded", () => {
+        if (win.FitxaCentre && typeof win.FitxaCentre.init === "function") {
+            win.FitxaCentre.init();
+        }
+    });
 })();
