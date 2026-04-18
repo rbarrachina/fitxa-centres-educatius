@@ -4,6 +4,7 @@
     const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
     const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
     const SOCRATA_SELECT = "*";
+    let currentCoursePromise = null;
     const KEY_LABELS = {
         any: "Any",
         curs: "Curs",
@@ -173,7 +174,8 @@
         return "La resposta del servidor no és JSON vàlid.";
     }
     async function fetchSocrataRows(whereClause, limit) {
-        const query = `SELECT ${SOCRATA_SELECT} WHERE ${whereClause} ORDER BY any DESC, curs DESC LIMIT ${limit}`;
+        const currentCourse = await getCurrentCourse();
+        const query = `SELECT ${SOCRATA_SELECT} WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
         const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
         const raw = await response.text();
         let rows = null;
@@ -193,6 +195,31 @@
         if (!Array.isArray(rows))
             return [];
         return rows;
+    }
+    async function getCurrentCourse() {
+        if (currentCoursePromise)
+            return currentCoursePromise;
+        currentCoursePromise = (async () => {
+            const query = "SELECT max(curs) as current_curs WHERE curs is not null";
+            const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+            const raw = await response.text();
+            let rows = null;
+            try {
+                rows = JSON.parse(raw);
+            }
+            catch {
+                throw new Error("No s'ha pogut determinar el curs actual (resposta no JSON).");
+            }
+            if (!response.ok || !Array.isArray(rows) || !rows.length) {
+                throw new Error("No s'ha pogut determinar el curs actual.");
+            }
+            const current = asText(rows[0]?.current_curs);
+            if (!current) {
+                throw new Error("No s'ha pogut determinar el curs actual.");
+            }
+            return current;
+        })();
+        return currentCoursePromise;
     }
     function rowToFitxaData(code, row) {
         if (!row) {

@@ -22,6 +22,7 @@
   const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
   const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
   const SOCRATA_SELECT = "*";
+  let currentCoursePromise: Promise<string> | null = null;
   const KEY_LABELS: Record<string, string> = {
     any: "Any",
     curs: "Curs",
@@ -195,7 +196,8 @@
   }
 
   async function fetchSocrataRows(whereClause: string, limit: number): Promise<SocrataRow[]> {
-    const query = `SELECT ${SOCRATA_SELECT} WHERE ${whereClause} ORDER BY any DESC, curs DESC LIMIT ${limit}`;
+    const currentCourse = await getCurrentCourse();
+    const query = `SELECT ${SOCRATA_SELECT} WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
     const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
     const raw = await response.text();
     let rows: any = null;
@@ -215,6 +217,30 @@
 
     if (!Array.isArray(rows)) return [];
     return rows as SocrataRow[];
+  }
+
+  async function getCurrentCourse(): Promise<string> {
+    if (currentCoursePromise) return currentCoursePromise;
+    currentCoursePromise = (async () => {
+      const query = "SELECT max(curs) as current_curs WHERE curs is not null";
+      const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+      const raw = await response.text();
+      let rows: any = null;
+      try {
+        rows = JSON.parse(raw);
+      } catch {
+        throw new Error("No s'ha pogut determinar el curs actual (resposta no JSON).");
+      }
+      if (!response.ok || !Array.isArray(rows) || !rows.length) {
+        throw new Error("No s'ha pogut determinar el curs actual.");
+      }
+      const current = asText(rows[0]?.current_curs);
+      if (!current) {
+        throw new Error("No s'ha pogut determinar el curs actual.");
+      }
+      return current;
+    })();
+    return currentCoursePromise;
   }
 
   function rowToFitxaData(code: string, row: SocrataRow | null): any {
