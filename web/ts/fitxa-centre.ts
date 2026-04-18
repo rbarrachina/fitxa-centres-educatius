@@ -23,6 +23,7 @@
   const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
   const SOCRATA_SELECT = "*";
   let currentCoursePromise: Promise<string> | null = null;
+  let currentCourseRowsPromise: Promise<SocrataRow[]> | null = null;
   const KEY_LABELS: Record<string, string> = {
     any: "Any",
     curs: "Curs",
@@ -274,6 +275,12 @@
 
     if (!Array.isArray(rows)) return [];
     return rows as SocrataRow[];
+  }
+
+  async function getCurrentCourseRows(): Promise<SocrataRow[]> {
+    if (currentCourseRowsPromise) return currentCourseRowsPromise;
+    currentCourseRowsPromise = fetchSocrataRows("1=1", 10000);
+    return currentCourseRowsPromise;
   }
 
   async function getCurrentCourse(): Promise<string> {
@@ -534,9 +541,10 @@
       };
 
       const searchFitxaByNameFromSocrata = async (name: string): Promise<SocrataRow[]> => {
-        const whereClause = `denominaci_completa IS NOT NULL AND upper(denominaci_completa) like upper('%${escapeSoql(name)}%')`;
-        const rows = await fetchSocrataRows(whereClause, 120);
-        return sortRowsByNameRelevance(dedupeByCode(rows), name);
+        const allRows = dedupeByCode(await getCurrentCourseRows());
+        const needle = normalizeText(name);
+        const filtered = allRows.filter((row) => normalizeText(asText(row.denominaci_completa)).includes(needle));
+        return sortRowsByNameRelevance(filtered, name);
       };
 
       const loadCentre = async (): Promise<void> => {

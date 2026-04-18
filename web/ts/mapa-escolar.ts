@@ -43,6 +43,7 @@
     "nom_naturalesa",
   ].join(", ");
   let currentCoursePromise: Promise<string> | null = null;
+  let currentCourseRowsPromise: Promise<SocrataRow[]> | null = null;
 
   function apiUrl(path: string): string {
     const normalizedPath = path.replace(/^\/+/, "");
@@ -122,6 +123,14 @@
       return current;
     })();
     return currentCoursePromise;
+  }
+
+  async function getCurrentCourseRows(): Promise<SocrataRow[]> {
+    if (currentCourseRowsPromise) return currentCourseRowsPromise;
+    const currentCourse = await getCurrentCourse();
+    const query = `SELECT ${SOCRATA_SELECT} WHERE curs = '${escapeSoql(currentCourse)}' ORDER BY denominaci_completa ASC, any DESC, curs DESC LIMIT 10000`;
+    currentCourseRowsPromise = fetchSocrataRows(query);
+    return currentCourseRowsPromise;
   }
 
   function dedupeByCode(rows: SocrataRow[]): SocrataRow[] {
@@ -220,10 +229,10 @@
   }
 
   async function searchByNameFromSocrata(name: string): Promise<any> {
-    const escaped = escapeSoql(name);
-    const currentCourse = await getCurrentCourse();
-    const query = `SELECT ${SOCRATA_SELECT} WHERE curs = '${escapeSoql(currentCourse)}' AND denominaci_completa IS NOT NULL AND upper(denominaci_completa) like upper('%${escaped}%') ORDER BY denominaci_completa ASC, any DESC, curs DESC LIMIT 120`;
-    const rows = sortMatches(dedupeByCode(await fetchSocrataRows(query)), name);
+    const allRows = dedupeByCode(await getCurrentCourseRows());
+    const needle = normalizeText(name);
+    const filtered = allRows.filter((row) => normalizeText(String(row.denominaci_completa || "")).includes(needle));
+    const rows = sortMatches(filtered, name);
     return rowToResponse(rows[0] || null, rows);
   }
 

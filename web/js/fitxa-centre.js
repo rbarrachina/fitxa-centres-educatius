@@ -5,6 +5,7 @@
     const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
     const SOCRATA_SELECT = "*";
     let currentCoursePromise = null;
+    let currentCourseRowsPromise = null;
     const KEY_LABELS = {
         any: "Any",
         curs: "Curs",
@@ -253,6 +254,12 @@
             return [];
         return rows;
     }
+    async function getCurrentCourseRows() {
+        if (currentCourseRowsPromise)
+            return currentCourseRowsPromise;
+        currentCourseRowsPromise = fetchSocrataRows("1=1", 10000);
+        return currentCourseRowsPromise;
+    }
     async function getCurrentCourse() {
         if (currentCoursePromise)
             return currentCoursePromise;
@@ -479,9 +486,10 @@
                 return rowToFitxaData(code, pickBestRow(rows));
             };
             const searchFitxaByNameFromSocrata = async (name) => {
-                const whereClause = `denominaci_completa IS NOT NULL AND upper(denominaci_completa) like upper('%${escapeSoql(name)}%')`;
-                const rows = await fetchSocrataRows(whereClause, 120);
-                return sortRowsByNameRelevance(dedupeByCode(rows), name);
+                const allRows = dedupeByCode(await getCurrentCourseRows());
+                const needle = normalizeText(name);
+                const filtered = allRows.filter((row) => normalizeText(asText(row.denominaci_completa)).includes(needle));
+                return sortRowsByNameRelevance(filtered, name);
             };
             const loadCentre = async () => {
                 const query = codeInput.value.trim();
