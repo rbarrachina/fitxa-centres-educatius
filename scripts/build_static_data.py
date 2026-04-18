@@ -9,19 +9,75 @@ from pathlib import Path
 
 DATASET_ID = "kvmv-ahh4"
 SOCRATA_BASE = "https://analisi.transparenciacatalunya.cat"
-VIEWS_API_URL = f"{SOCRATA_BASE}/api/views/{DATASET_ID}"
 RESOURCE_API_URL = f"{SOCRATA_BASE}/resource/{DATASET_ID}.json"
 DATASET_PUBLIC_URL = f"{SOCRATA_BASE}/d/{DATASET_ID}"
 OUTPUT_PATH = Path(__file__).resolve().parents[1] / "web" / "data" / "centres.json"
 
-
-def _normalize(value: str) -> str:
-    import unicodedata
-
-    text = unicodedata.normalize("NFD", value or "")
-    text = "".join(ch for ch in text if unicodedata.category(ch) != "Mn")
-    text = re.sub(r"[^a-zA-Z0-9]+", " ", text).strip().lower()
-    return text
+SELECT_FIELDS = [
+    "curs",
+    "any",
+    "codi_centre",
+    "denominaci_completa",
+    "codi_naturalesa",
+    "nom_naturalesa",
+    "codi_titularitat",
+    "nom_titularitat",
+    "adre_a",
+    "codi_postal",
+    "tel_fon",
+    "codi_delegaci",
+    "nom_delegaci",
+    "codi_comarca",
+    "nom_comarca",
+    "codi_municipi",
+    "codi_municipi_6",
+    "nom_municipi",
+    "codi_districte_municipal",
+    "nom_dm",
+    "codi_localitat",
+    "nom_localitat",
+    "coordenades_utm_x",
+    "coordenades_utm_y",
+    "coordenades_geo_x",
+    "coordenades_geo_y",
+    "e_mail_centre",
+    "url",
+    "imatge",
+    "einf1c",
+    "einf2c",
+    "epri",
+    "eso",
+    "batx",
+    "aa01",
+    "cfpm",
+    "ppas",
+    "aa03",
+    "cfps",
+    "ee",
+    "ife",
+    "pfi",
+    "pa01",
+    "cfam",
+    "pa02",
+    "cfas",
+    "esdi",
+    "escm",
+    "escs",
+    "adr",
+    "crbc",
+    "idi",
+    "dane",
+    "danp",
+    "dans",
+    "muse",
+    "musp",
+    "muss",
+    "tegm",
+    "tegs",
+    "estr",
+    "adults",
+    "geo_1",
+]
 
 
 def _fetch_json(url: str, timeout: int = 30) -> dict | list:
@@ -37,52 +93,24 @@ def _fetch_json(url: str, timeout: int = 30) -> dict | list:
     return json.loads(raw)
 
 
-def _column_by_patterns(columns: list[dict], patterns: list[list[str]]) -> str | None:
-    for column in columns:
-        field_name = str(column.get("fieldName") or "").strip()
-        display_name = str(column.get("name") or "").strip()
-        hay = _normalize(f"{field_name} {display_name}")
-        if not hay:
-            continue
-        for pattern in patterns:
-            if all(token in hay for token in pattern):
-                return field_name
-    return None
-
-
-def _pick_columns(columns: list[dict]) -> dict[str, str | None]:
-    return {
-        "code": _column_by_patterns(columns, [["codi", "centre"]]),
-        "name": _column_by_patterns(columns, [["denominacio"], ["nom", "centre"]]),
-        "municipi": _column_by_patterns(columns, [["nom", "municipi"], ["municipi"]]),
-        "mail": _column_by_patterns(columns, [["correu"], ["mail"]]),
-        "phone": _column_by_patterns(columns, [["telefon"]]),
-        "web": _column_by_patterns(columns, [["url", "web"], ["pagina", "web"], ["web"]]),
-        "coord_x": _column_by_patterns(columns, [["utm", "x"], ["coord", "x"]]),
-        "coord_y": _column_by_patterns(columns, [["utm", "y"], ["coord", "y"]]),
-        "territorial_area_st": _column_by_patterns(columns, [["servei", "territorial"], ["sstt"]]),
-        "naturalesa": _column_by_patterns(columns, [["naturalesa"]]),
-        "address": _column_by_patterns(columns, [["adreca"], ["adresa"]]),
-    }
-
-
 def _as_text(value: object) -> str:
     if value is None:
         return ""
     return str(value).strip()
 
 
-def _fetch_rows(select_fields: list[str], page_size: int = 50000) -> list[dict]:
+def _fetch_rows(page_size: int = 50000) -> list[dict]:
     rows: list[dict] = []
     offset = 0
 
+    select_sql = ", ".join(SELECT_FIELDS)
     while True:
-        params = {
-            "$limit": str(page_size),
-            "$offset": str(offset),
-            "$select": ",".join(select_fields),
-        }
-        url = f"{RESOURCE_API_URL}?{urllib.parse.urlencode(params)}"
+        query = (
+            f"SELECT {select_sql} "
+            "WHERE codi_centre IS NOT NULL "
+            f"ORDER BY any DESC, curs DESC LIMIT {page_size} OFFSET {offset}"
+        )
+        url = f"{RESOURCE_API_URL}?{urllib.parse.urlencode({'$query': query})}"
         page = _fetch_json(url)
         if not isinstance(page, list):
             break
@@ -104,61 +132,83 @@ def _normalize_code(raw_code: str) -> str:
     return code if len(code) == 8 else ""
 
 
-def _prefer(new: dict, old: dict) -> dict:
-    new_score = sum(1 for v in new.values() if isinstance(v, str) and v)
-    old_score = sum(1 for v in old.values() if isinstance(v, str) and v)
-    return new if new_score >= old_score else old
+def _merge_prefer_latest(base: dict, older: dict) -> dict:
+    merged = dict(base)
+    for key, old_value in older.items():
+        if key in {"_any", "_curs"}:
+            continue
+        if not merged.get(key) and old_value:
+            merged[key] = old_value
+    return merged
+
+
+def _to_int(value: str) -> int:
+    try:
+        return int((value or "").strip())
+    except Exception:
+        return 0
 
 
 def main() -> None:
-    metadata = _fetch_json(VIEWS_API_URL)
-    if not isinstance(metadata, dict):
-        raise RuntimeError("No s'ha pogut llegir la metadata del dataset.")
-
-    columns = metadata.get("columns") or []
-    if not isinstance(columns, list) or not columns:
-        raise RuntimeError("El dataset no te la llista de columnes esperada.")
-
-    selected_columns = _pick_columns(columns)
-    required = ["code", "name"]
-    missing_required = [key for key in required if not selected_columns.get(key)]
-    if missing_required:
-        raise RuntimeError(f"No s'han pogut identificar columnes obligatòries: {', '.join(missing_required)}")
-
-    select_fields = sorted({field for field in selected_columns.values() if field})
-    rows = _fetch_rows(select_fields=select_fields)
+    rows = _fetch_rows()
 
     by_code: dict[str, dict] = {}
     for row in rows:
         if not isinstance(row, dict):
             continue
 
-        code = _normalize_code(_as_text(row.get(selected_columns["code"] or "")))
+        code = _normalize_code(_as_text(row.get("codi_centre")))
         if not code:
             continue
 
+        year = _to_int(_as_text(row.get("any")))
+        cours = _to_int(_as_text(row.get("curs")))
+
+        address_main = _as_text(row.get("adre_a"))
+        postal_code = _as_text(row.get("codi_postal"))
+        address = address_main
+        if address_main and postal_code:
+            address = f"{address_main} ({postal_code})"
+
         centre = {
             "code": code,
-            "name": _as_text(row.get(selected_columns["name"] or "")),
-            "municipi": _as_text(row.get(selected_columns["municipi"] or "")),
-            "mail": _as_text(row.get(selected_columns["mail"] or "")),
-            "phone": _as_text(row.get(selected_columns["phone"] or "")),
-            "web": _as_text(row.get(selected_columns["web"] or "")),
-            "coord_x": _as_text(row.get(selected_columns["coord_x"] or "")),
-            "coord_y": _as_text(row.get(selected_columns["coord_y"] or "")),
-            "territorial_area_st": _as_text(row.get(selected_columns["territorial_area_st"] or "")),
-            "naturalesa": _as_text(row.get(selected_columns["naturalesa"] or "")),
-            "address": _as_text(row.get(selected_columns["address"] or "")),
+            "name": _as_text(row.get("denominaci_completa")),
+            "municipi": _as_text(row.get("nom_municipi")),
+            "mail": _as_text(row.get("e_mail_centre")),
+            "phone": _as_text(row.get("tel_fon")),
+            "web": _as_text(row.get("url")),
+            "coord_x": _as_text(row.get("coordenades_utm_x")),
+            "coord_y": _as_text(row.get("coordenades_utm_y")),
+            "territorial_area_st": _as_text(row.get("nom_delegaci")),
+            "naturalesa": _as_text(row.get("nom_naturalesa")),
+            "address": address,
             "source_url": DATASET_PUBLIC_URL,
+            "_any": year,
+            "_curs": cours,
         }
 
         if not centre["name"]:
             continue
 
         current = by_code.get(code)
-        by_code[code] = _prefer(centre, current) if current else centre
+        if not current:
+            by_code[code] = centre
+            continue
+
+        current_rank = (int(current.get("_any", 0)), int(current.get("_curs", 0)))
+        new_rank = (year, cours)
+        if new_rank > current_rank:
+            by_code[code] = _merge_prefer_latest(centre, current)
+        elif new_rank == current_rank:
+            by_code[code] = _merge_prefer_latest(current, centre)
+        else:
+            by_code[code] = _merge_prefer_latest(current, centre)
 
     centres = sorted(by_code.values(), key=lambda item: (item["name"].lower(), item["code"]))
+    for centre in centres:
+        centre.pop("_any", None)
+        centre.pop("_curs", None)
+
     payload = {
         "generated_at": dt.datetime.now(dt.timezone.utc).isoformat(),
         "source": DATASET_PUBLIC_URL,
