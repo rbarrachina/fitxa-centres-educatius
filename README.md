@@ -37,8 +37,6 @@ Obre `http://127.0.0.1:8000` al navegador.
 ## API
 
 - `GET /api/centre/{codi}`
-- `GET /api/mapa-escolar/codi?nom={nom_o_text}`
-- `GET /api/mapa-escolar/detall?codi={codi_centre}`
 
 ## GitHub Pages (estat actual)
 
