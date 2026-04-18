@@ -1,9 +1,9 @@
 (() => {
-    const win = window;
-    const apiBase = String(win.MAPES_API_BASE || "").trim().replace(/\/+$/, "");
+    const apiBase = String(window.MAPES_API_BASE || "")
+        .trim()
+        .replace(/\/+$/, "");
     const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
     const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
-    const SOCRATA_SELECT = "*";
     let currentCoursePromise = null;
     let currentCourseRowsPromise = null;
     const KEY_LABELS = {
@@ -228,12 +228,9 @@
         });
         return fields;
     }
-    function buildNoJsonMessage() {
-        return "La resposta del servidor no és JSON vàlid.";
-    }
     async function fetchSocrataRows(whereClause, limit) {
         const currentCourse = await getCurrentCourse();
-        const query = `SELECT ${SOCRATA_SELECT} WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
+        const query = `SELECT * WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
         const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
         const raw = await response.text();
         let rows = null;
@@ -367,299 +364,291 @@
             lon: longOrigin + (lonRad * 180) / Math.PI,
         };
     }
-    win.FitxaCentre = {
-        init: () => {
-            const codeInput = byId("code");
-            const loadButton = byId("load");
-            const messageEl = byId("message");
-            const fitxaMatchesWrap = byId("fitxaMatchesWrap");
-            const fitxaMatches = byId("fitxaMatches");
-            const metaEl = byId("meta");
-            const resultTable = byId("resultTable");
-            const resultBody = byId("resultBody");
-            const mapModalBackdrop = byId("mapModalBackdrop");
-            const closeMapModalButton = byId("closeMapModal");
-            const mapFrame = byId("mapFrame");
-            const openMapLink = byId("openMapLink");
-            const mapCoordsLabel = byId("mapCoordsLabel");
-            const setMessage = (text, isError = false) => {
-                messageEl.textContent = text;
-                messageEl.classList.toggle("error", isError);
-            };
-            const buildCellValue = (label, value) => {
-                const safeValue = value || "";
-                const isEmailField = /correu/i.test(label) && /@/.test(safeValue);
-                const isWebField = /url|web/i.test(label);
-                const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
-                const escaped = escapeHtml(safeValue);
-                if (isEmailField) {
-                    return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" type="button">Copiar</button></div>`;
-                }
-                if (webUrl) {
-                    const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
-                    const safeOpenUrl = escapeHtml(normalizedUrl);
-                    return `<div class="coord-with-map"><span>${escaped}</span><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web</button></div>`;
-                }
-                return escaped;
-            };
-            const row = (label, value) => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
-            const buildCodeRow = (codeValue) => {
-                const codeSafe = escapeHtml(codeValue || "");
-                return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
-            };
-            const buildCoordinateRow = (coordText, xValue, yValue) => {
-                const coordSafe = escapeHtml(coordText || "");
-                const xSafe = escapeHtml(xValue || "");
-                const ySafe = escapeHtml(yValue || "");
-                return `<tr><th>Coordenades</th><td><div class="coord-with-map"><span>${coordSafe}</span><button class="map-btn" type="button" data-map-x="${xSafe}" data-map-y="${ySafe}">Veure mapa</button></div></td></tr>`;
-            };
-            const closeMapModal = () => {
-                mapModalBackdrop.classList.add("hidden");
-                mapFrame.src = "";
-            };
-            const openMapModal = (xValue, yValue) => {
-                const x = Number(xValue);
-                const y = Number(yValue);
-                if (!Number.isFinite(x) || !Number.isFinite(y)) {
-                    setMessage("Les coordenades no son valides.", true);
-                    return;
-                }
-                const converted = utmToLatLon(31, x, y, true);
-                const lat = converted.lat;
-                const lon = converted.lon;
-                const bbox = `${lon - 0.01}%2C${lat - 0.01}%2C${lon + 0.01}%2C${lat + 0.01}`;
-                const marker = `${lat}%2C${lon}`;
-                mapFrame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
-                openMapLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
-                mapCoordsLabel.textContent = `X: ${xValue} | Y: ${yValue} | Lat: ${lat.toFixed(6)} | Lon: ${lon.toFixed(6)}`;
-                mapModalBackdrop.classList.remove("hidden");
-            };
-            win.MapesMapModal = {
-                openByUtm: (xValue, yValue) => openMapModal(xValue, yValue),
-                close: () => closeMapModal(),
-            };
-            const renderData = (data) => {
-                const fields = { ...(data.fields || {}) };
-                const rows = [];
-                const pullFieldByLabel = (labels) => {
-                    for (const label of labels) {
-                        if (!(label in fields))
-                            continue;
-                        const value = fields[label];
-                        delete fields[label];
-                        if (Array.isArray(value)) {
-                            return value.map((v) => String(v ?? "")).join(" | ");
-                        }
-                        return String(value ?? "");
+    const init = () => {
+        const codeInput = byId("code");
+        const loadButton = byId("load");
+        const messageEl = byId("message");
+        const fitxaMatchesWrap = byId("fitxaMatchesWrap");
+        const fitxaMatches = byId("fitxaMatches");
+        const metaEl = byId("meta");
+        const resultTable = byId("resultTable");
+        const resultBody = byId("resultBody");
+        const mapModalBackdrop = byId("mapModalBackdrop");
+        const closeMapModalButton = byId("closeMapModal");
+        const mapFrame = byId("mapFrame");
+        const openMapLink = byId("openMapLink");
+        const mapCoordsLabel = byId("mapCoordsLabel");
+        const setMessage = (text, isError = false) => {
+            messageEl.textContent = text;
+            messageEl.classList.toggle("error", isError);
+        };
+        const buildCellValue = (label, value) => {
+            const safeValue = value || "";
+            const isEmailField = /correu/i.test(label) && /@/.test(safeValue);
+            const isWebField = /url|web/i.test(label);
+            const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
+            const escaped = escapeHtml(safeValue);
+            if (isEmailField) {
+                return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" type="button">Copiar</button></div>`;
+            }
+            if (webUrl) {
+                const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
+                const safeOpenUrl = escapeHtml(normalizedUrl);
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web</button></div>`;
+            }
+            return escaped;
+        };
+        const row = (label, value) => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
+        const buildCodeRow = (codeValue) => {
+            const codeSafe = escapeHtml(codeValue || "");
+            return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
+        };
+        const buildCoordinateRow = (coordText, xValue, yValue) => {
+            const coordSafe = escapeHtml(coordText || "");
+            const xSafe = escapeHtml(xValue || "");
+            const ySafe = escapeHtml(yValue || "");
+            return `<tr><th>Coordenades</th><td><div class="coord-with-map"><span>${coordSafe}</span><button class="map-btn" type="button" data-map-x="${xSafe}" data-map-y="${ySafe}">Veure mapa</button></div></td></tr>`;
+        };
+        const closeMapModal = () => {
+            mapModalBackdrop.classList.add("hidden");
+            mapFrame.src = "";
+        };
+        const openMapModal = (xValue, yValue) => {
+            const x = Number(xValue);
+            const y = Number(yValue);
+            if (!Number.isFinite(x) || !Number.isFinite(y)) {
+                setMessage("Les coordenades no son valides.", true);
+                return;
+            }
+            const converted = utmToLatLon(31, x, y, true);
+            const lat = converted.lat;
+            const lon = converted.lon;
+            const bbox = `${lon - 0.01}%2C${lat - 0.01}%2C${lon + 0.01}%2C${lat + 0.01}`;
+            const marker = `${lat}%2C${lon}`;
+            mapFrame.src = `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${marker}`;
+            openMapLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+            mapCoordsLabel.textContent = `X: ${xValue} | Y: ${yValue} | Lat: ${lat.toFixed(6)} | Lon: ${lon.toFixed(6)}`;
+            mapModalBackdrop.classList.remove("hidden");
+        };
+        const renderData = (data) => {
+            const fields = { ...(data.fields || {}) };
+            const rows = [];
+            const pullFieldByLabel = (labels) => {
+                for (const label of labels) {
+                    if (!(label in fields))
+                        continue;
+                    const value = fields[label];
+                    delete fields[label];
+                    if (Array.isArray(value)) {
+                        return value.map((v) => String(v ?? "")).join(" | ");
                     }
-                    return "";
-                };
-                const emailValue = pullFieldByLabel([
-                    "Correu electrònic del centre",
-                    "Correu electrònic departamental",
-                    "Correu electronic del centre",
-                ]);
-                const webValue = pullFieldByLabel([
-                    "URL pàgina web centre",
-                    "URL pagina web centre",
-                    "Web",
-                    "URL",
-                ]);
-                rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || ""));
-                rows.push(row("Nom centre", (data.centre && data.centre.name) || ""));
-                rows.push(row("Correu electrònic del centre", emailValue || "-"));
-                rows.push(row("URL pàgina web centre", webValue || "-"));
-                if (data.coordinates && data.coordinates.x && data.coordinates.y) {
-                    const coordText = fields.Coordenades || `${data.coordinates.x} X | ${data.coordinates.y} Y`;
-                    rows.push(buildCoordinateRow(coordText, data.coordinates.x, data.coordinates.y));
+                    return String(value ?? "");
                 }
-                Object.entries(fields).forEach(([label, value]) => {
-                    if (label === "Coordenades")
-                        return;
-                    const displayValue = Array.isArray(value) ? value.join(" | ") : String(value ?? "");
-                    rows.push(row(label, displayValue));
-                });
-                resultBody.innerHTML = rows.join("");
-                resultTable.classList.remove("hidden");
-                metaEl.classList.remove("hidden");
-                metaEl.textContent = `Font: ${data.source_url || "-"} | Estat: ${data.status}`;
+                return "";
             };
-            const hideMatchChooser = () => {
-                fitxaMatchesWrap.classList.add("hidden");
-                fitxaMatches.innerHTML = "";
-            };
-            const renderMatchChooser = (rows) => {
-                fitxaMatchesWrap.classList.remove("hidden");
-                fitxaMatches.innerHTML = rows
-                    .map((row) => {
-                    const code = escapeHtml(asText(row.codi_centre) || "-");
-                    const name = escapeHtml(asText(row.denominaci_completa) || "-");
-                    const town = escapeHtml(asText(row.nom_municipi) || "-");
-                    return ('<div class="match-row">' +
-                        `<span><span class="match-name">${code} - ${name}</span> <span class="match-town">(${town})</span></span>` +
-                        `<button class="match-view-btn fitxa-pick-btn" type="button" data-code="${code}">Tria</button>` +
-                        "</div>");
-                })
-                    .join("");
-            };
-            const fetchFitxaFromSocrata = async (code) => {
-                const whereClause = `codi_centre = '${escapeSoql(code)}'`;
-                const rows = await fetchSocrataRows(whereClause, 5);
-                return rowToFitxaData(code, pickBestRow(rows));
-            };
-            const searchFitxaByNameFromSocrata = async (name) => {
-                const allRows = dedupeByCode(await getCurrentCourseRows());
-                const needle = normalizeText(name);
-                const filtered = allRows.filter((row) => normalizeText(asText(row.denominaci_completa)).includes(needle));
-                return sortRowsByNameRelevance(filtered, name);
-            };
-            const loadCentre = async () => {
-                const query = codeInput.value.trim();
-                setMessage("Carregant dades...");
-                hideMatchChooser();
-                resultTable.classList.add("hidden");
-                metaEl.classList.add("hidden");
-                if (!query) {
-                    setMessage("Has d'indicar el codi o nom del centre.", true);
+            const emailValue = pullFieldByLabel([
+                "Correu electrònic del centre",
+                "Correu electrònic departamental",
+                "Correu electronic del centre",
+            ]);
+            const webValue = pullFieldByLabel([
+                "URL pàgina web centre",
+                "URL pagina web centre",
+                "Web",
+                "URL",
+            ]);
+            rows.push(buildCodeRow((data.centre && data.centre.code) || data.requested_code || ""));
+            rows.push(row("Nom centre", (data.centre && data.centre.name) || ""));
+            rows.push(row("Correu electrònic del centre", emailValue || "-"));
+            rows.push(row("URL pàgina web centre", webValue || "-"));
+            if (data.coordinates && data.coordinates.x && data.coordinates.y) {
+                const coordText = fields.Coordenades || `${data.coordinates.x} X | ${data.coordinates.y} Y`;
+                rows.push(buildCoordinateRow(coordText, data.coordinates.x, data.coordinates.y));
+            }
+            Object.entries(fields).forEach(([label, value]) => {
+                if (label === "Coordenades")
+                    return;
+                const displayValue = Array.isArray(value) ? value.join(" | ") : String(value ?? "");
+                rows.push(row(label, displayValue));
+            });
+            resultBody.innerHTML = rows.join("");
+            resultTable.classList.remove("hidden");
+            metaEl.classList.remove("hidden");
+            metaEl.textContent = `Font: ${data.source_url || "-"} | Estat: ${data.status}`;
+        };
+        const hideMatchChooser = () => {
+            fitxaMatchesWrap.classList.add("hidden");
+            fitxaMatches.innerHTML = "";
+        };
+        const renderMatchChooser = (rows) => {
+            fitxaMatchesWrap.classList.remove("hidden");
+            fitxaMatches.innerHTML = rows
+                .map((row) => {
+                const code = escapeHtml(asText(row.codi_centre) || "-");
+                const name = escapeHtml(asText(row.denominaci_completa) || "-");
+                const town = escapeHtml(asText(row.nom_municipi) || "-");
+                return ('<div class="match-row">' +
+                    `<span><span class="match-name">${code} - ${name}</span> <span class="match-town">(${town})</span></span>` +
+                    `<button class="match-view-btn fitxa-pick-btn" type="button" data-code="${code}">Tria</button>` +
+                    "</div>");
+            })
+                .join("");
+        };
+        const fetchFitxaFromSocrata = async (code) => {
+            const whereClause = `codi_centre = '${escapeSoql(code)}'`;
+            const rows = await fetchSocrataRows(whereClause, 5);
+            return rowToFitxaData(code, pickBestRow(rows));
+        };
+        const searchFitxaByNameFromSocrata = async (name) => {
+            const allRows = dedupeByCode(await getCurrentCourseRows());
+            const needle = normalizeText(name);
+            const filtered = allRows.filter((row) => normalizeText(asText(row.denominaci_completa)).includes(needle));
+            return sortRowsByNameRelevance(filtered, name);
+        };
+        const loadCentre = async () => {
+            const query = codeInput.value.trim();
+            setMessage("Carregant dades...");
+            hideMatchChooser();
+            resultTable.classList.add("hidden");
+            metaEl.classList.add("hidden");
+            if (!query) {
+                setMessage("Has d'indicar el codi o nom del centre.", true);
+                return;
+            }
+            const isCodeSearch = /^\d{8}$/.test(query);
+            loadButton.disabled = true;
+            try {
+                if (!isCodeSearch && apiBase) {
+                    setMessage("Amb backend extern, la fitxa per nom no està activada. Introdueix un codi de centre.", true);
                     return;
                 }
-                const isCodeSearch = /^\d{8}$/.test(query);
-                loadButton.disabled = true;
+                if (!apiBase) {
+                    if (isCodeSearch) {
+                        const data = await fetchFitxaFromSocrata(query);
+                        if (data.status !== "ok") {
+                            setMessage(data.message || "No s'ha pogut carregar el centre.", true);
+                            return;
+                        }
+                        renderData(data);
+                        setMessage("Dades carregades correctament.");
+                        return;
+                    }
+                    const matches = await searchFitxaByNameFromSocrata(query);
+                    if (!matches.length) {
+                        setMessage("No s'ha trobat cap centre amb aquest nom.", true);
+                        return;
+                    }
+                    if (matches.length === 1) {
+                        const selected = matches[0];
+                        const code = asText(selected.codi_centre);
+                        const data = rowToFitxaData(code, selected);
+                        renderData(data);
+                        setMessage("Dades carregades correctament.");
+                        return;
+                    }
+                    renderMatchChooser(matches);
+                    setMessage(`S'han trobat ${matches.length} centres. Tria'n un.`);
+                    return;
+                }
+                const response = await fetch(apiUrl(`api/centre/${query}`));
+                const raw = await response.text();
+                let data = null;
                 try {
-                    if (!isCodeSearch && apiBase) {
-                        setMessage("Amb backend extern, la fitxa per nom no està activada. Introdueix un codi de centre.", true);
-                        return;
-                    }
-                    if (!apiBase) {
-                        if (isCodeSearch) {
-                            const data = await fetchFitxaFromSocrata(query);
-                            if (data.status !== "ok") {
-                                setMessage(data.message || "No s'ha pogut carregar el centre.", true);
-                                return;
-                            }
-                            renderData(data);
-                            setMessage("Dades carregades correctament.");
-                            return;
-                        }
-                        const matches = await searchFitxaByNameFromSocrata(query);
-                        if (!matches.length) {
-                            setMessage("No s'ha trobat cap centre amb aquest nom.", true);
-                            return;
-                        }
-                        if (matches.length === 1) {
-                            const selected = matches[0];
-                            const code = asText(selected.codi_centre);
-                            const data = rowToFitxaData(code, selected);
-                            renderData(data);
-                            setMessage("Dades carregades correctament.");
-                            return;
-                        }
-                        renderMatchChooser(matches);
-                        setMessage(`S'han trobat ${matches.length} centres. Tria'n un.`);
-                        return;
-                    }
-                    const response = await fetch(apiUrl(`api/centre/${query}`));
-                    const raw = await response.text();
-                    let data = null;
-                    try {
-                        data = JSON.parse(raw);
-                    }
-                    catch {
-                        setMessage(buildNoJsonMessage(), true);
-                        return;
-                    }
-                    if (!response.ok) {
-                        setMessage(data.message || "No s'ha pogut carregar el centre.", true);
-                        return;
-                    }
-                    renderData(data);
-                    setMessage("Dades carregades correctament.");
+                    data = JSON.parse(raw);
                 }
-                catch (error) {
-                    setMessage(`Error de connexio: ${error.message}`, true);
-                }
-                finally {
-                    loadButton.disabled = false;
-                }
-            };
-            loadButton.addEventListener("click", loadCentre);
-            closeMapModalButton.addEventListener("click", closeMapModal);
-            mapModalBackdrop.addEventListener("click", (event) => {
-                if (event.target === mapModalBackdrop)
-                    closeMapModal();
-            });
-            document.addEventListener("keydown", (event) => {
-                if (event.key === "Escape" && !mapModalBackdrop.classList.contains("hidden"))
-                    closeMapModal();
-            });
-            resultBody.addEventListener("click", async (event) => {
-                const target = event.target;
-                const copyButton = target.closest(".copy-btn");
-                if (copyButton) {
-                    const text = copyButton.dataset.copy || "";
-                    if (!text)
-                        return;
-                    try {
-                        await navigator.clipboard.writeText(text);
-                        setMessage("Correu copiat al porta-retalls.");
-                    }
-                    catch {
-                        setMessage("No s'ha pogut copiar el correu.", true);
-                    }
+                catch {
+                    setMessage("La resposta del servidor no és JSON vàlid.", true);
                     return;
                 }
-                const mapButton = target.closest(".map-btn");
-                if (mapButton) {
-                    openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "");
+                if (!response.ok) {
+                    setMessage(data.message || "No s'ha pogut carregar el centre.", true);
                     return;
                 }
-                const webButton = target.closest(".web-btn");
-                if (!webButton)
+                renderData(data);
+                setMessage("Dades carregades correctament.");
+            }
+            catch (error) {
+                setMessage(`Error de connexio: ${error.message}`, true);
+            }
+            finally {
+                loadButton.disabled = false;
+            }
+        };
+        loadButton.addEventListener("click", loadCentre);
+        closeMapModalButton.addEventListener("click", closeMapModal);
+        mapModalBackdrop.addEventListener("click", (event) => {
+            if (event.target === mapModalBackdrop)
+                closeMapModal();
+        });
+        document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !mapModalBackdrop.classList.contains("hidden"))
+                closeMapModal();
+        });
+        resultBody.addEventListener("click", async (event) => {
+            const target = event.target;
+            const copyButton = target.closest(".copy-btn");
+            if (copyButton) {
+                const text = copyButton.dataset.copy || "";
+                if (!text)
                     return;
-                const openUrl = webButton.dataset.openUrl || webButton.dataset.sourceUrl || "";
-                if (!openUrl)
-                    return;
-                window.open(openUrl, "_blank", "noopener,noreferrer");
-            });
-            fitxaMatches.addEventListener("click", async (event) => {
-                const target = event.target;
-                const pickButton = target.closest(".fitxa-pick-btn");
-                if (!pickButton)
-                    return;
-                const selectedCode = asText(pickButton.dataset.code);
-                if (!selectedCode)
-                    return;
-                setMessage("Carregant centre seleccionat...");
-                hideMatchChooser();
-                resultTable.classList.add("hidden");
-                metaEl.classList.add("hidden");
-                loadButton.disabled = true;
                 try {
-                    const data = await fetchFitxaFromSocrata(selectedCode);
-                    if (data.status !== "ok") {
-                        setMessage("No s'ha pogut carregar el centre seleccionat.", true);
-                        return;
-                    }
-                    renderData(data);
-                    setMessage("Centre seleccionat correctament.");
+                    await navigator.clipboard.writeText(text);
+                    setMessage("Correu copiat al porta-retalls.");
                 }
-                catch (error) {
-                    setMessage(`Error de connexio: ${error.message}`, true);
+                catch {
+                    setMessage("No s'ha pogut copiar el correu.", true);
                 }
-                finally {
-                    loadButton.disabled = false;
+                return;
+            }
+            const mapButton = target.closest(".map-btn");
+            if (mapButton) {
+                openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "");
+                return;
+            }
+            const webButton = target.closest(".web-btn");
+            if (!webButton)
+                return;
+            const openUrl = webButton.dataset.openUrl || webButton.dataset.sourceUrl || "";
+            if (!openUrl)
+                return;
+            window.open(openUrl, "_blank", "noopener,noreferrer");
+        });
+        fitxaMatches.addEventListener("click", async (event) => {
+            const target = event.target;
+            const pickButton = target.closest(".fitxa-pick-btn");
+            if (!pickButton)
+                return;
+            const selectedCode = asText(pickButton.dataset.code);
+            if (!selectedCode)
+                return;
+            setMessage("Carregant centre seleccionat...");
+            hideMatchChooser();
+            resultTable.classList.add("hidden");
+            metaEl.classList.add("hidden");
+            loadButton.disabled = true;
+            try {
+                const data = await fetchFitxaFromSocrata(selectedCode);
+                if (data.status !== "ok") {
+                    setMessage("No s'ha pogut carregar el centre seleccionat.", true);
+                    return;
                 }
-            });
-            codeInput.addEventListener("keydown", (event) => {
-                if (event.key === "Enter")
-                    loadCentre();
-            });
-            codeInput.value = "08019472";
-        },
+                renderData(data);
+                setMessage("Centre seleccionat correctament.");
+            }
+            catch (error) {
+                setMessage(`Error de connexio: ${error.message}`, true);
+            }
+            finally {
+                loadButton.disabled = false;
+            }
+        });
+        codeInput.addEventListener("keydown", (event) => {
+            if (event.key === "Enter")
+                loadCentre();
+        });
+        codeInput.value = "";
     };
     document.addEventListener("DOMContentLoaded", () => {
-        if (win.FitxaCentre && typeof win.FitxaCentre.init === "function") {
-            win.FitxaCentre.init();
-        }
+        init();
     });
 })();

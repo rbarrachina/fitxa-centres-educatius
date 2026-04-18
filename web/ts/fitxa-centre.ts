@@ -1,27 +1,12 @@
 (() => {
-  type MapModalApi = {
-    openByUtm: (xValue: string, yValue: string) => void;
-    close: () => void;
-  };
-
-  type FitxaApi = {
-    init: () => void;
-  };
-
   type SocrataRow = Record<string, unknown>;
 
-  type MapesWindow = Window & {
-    FitxaCentre?: FitxaApi;
-    MapesMapModal?: MapModalApi;
-    MAPES_API_BASE?: string;
-  };
-
-  const win = window as MapesWindow;
-  const apiBase = String(win.MAPES_API_BASE || "").trim().replace(/\/+$/, "");
+  const apiBase = String((window as Window & { MAPES_API_BASE?: string }).MAPES_API_BASE || "")
+    .trim()
+    .replace(/\/+$/, "");
 
   const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
   const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
-  const SOCRATA_SELECT = "*";
   let currentCoursePromise: Promise<string> | null = null;
   let currentCourseRowsPromise: Promise<SocrataRow[]> | null = null;
   const KEY_LABELS: Record<string, string> = {
@@ -249,13 +234,9 @@
     return fields;
   }
 
-  function buildNoJsonMessage(): string {
-    return "La resposta del servidor no és JSON vàlid.";
-  }
-
   async function fetchSocrataRows(whereClause: string, limit: number): Promise<SocrataRow[]> {
     const currentCourse = await getCurrentCourse();
-    const query = `SELECT ${SOCRATA_SELECT} WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
+    const query = `SELECT * WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
     const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
     const raw = await response.text();
     let rows: any = null;
@@ -402,8 +383,7 @@
     };
   }
 
-  win.FitxaCentre = {
-    init: () => {
+  const init = (): void => {
       const codeInput = byId<HTMLInputElement>("code");
       const loadButton = byId<HTMLButtonElement>("load");
       const messageEl = byId<HTMLDivElement>("message");
@@ -477,11 +457,6 @@
         openMapLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
         mapCoordsLabel.textContent = `X: ${xValue} | Y: ${yValue} | Lat: ${lat.toFixed(6)} | Lon: ${lon.toFixed(6)}`;
         mapModalBackdrop.classList.remove("hidden");
-      };
-
-      win.MapesMapModal = {
-        openByUtm: (xValue: string, yValue: string) => openMapModal(xValue, yValue),
-        close: () => closeMapModal(),
       };
 
       const renderData = (data: any): void => {
@@ -628,7 +603,7 @@
           try {
             data = JSON.parse(raw);
           } catch {
-            setMessage(buildNoJsonMessage(), true);
+            setMessage("La resposta del servidor no és JSON vàlid.", true);
             return;
           }
           if (!response.ok) {
@@ -716,13 +691,10 @@
         if (event.key === "Enter") loadCentre();
       });
 
-      codeInput.value = "08019472";
-    },
-  };
+      codeInput.value = "";
+    };
 
   document.addEventListener("DOMContentLoaded", () => {
-    if (win.FitxaCentre && typeof win.FitxaCentre.init === "function") {
-      win.FitxaCentre.init();
-    }
+    init();
   });
 })();

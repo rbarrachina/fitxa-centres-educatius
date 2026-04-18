@@ -62,6 +62,11 @@
       font-size: 1rem;
     }
 
+    input::placeholder {
+      color: #8a97a4;
+      opacity: 1;
+    }
+
     button {
       border: 0;
       border-radius: 8px;
@@ -209,44 +214,6 @@
       display: none;
     }
 
-    .result-box {
-      border: 1px solid #c7d2dc;
-      background:
-        radial-gradient(circle at top right, rgba(10, 143, 119, 0.08), transparent 38%),
-        #f9fcfe;
-      border-radius: 14px;
-      padding: 16px;
-      margin-top: 10px;
-    }
-
-    .result-title {
-      font-size: 0.9rem;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: #3f5a69;
-      margin-bottom: 8px;
-    }
-
-    .result-code {
-      display: inline-block;
-      margin-top: 2px;
-      font-size: 2.05rem;
-      line-height: 1;
-      font-weight: 800;
-      letter-spacing: 0.02em;
-      color: #163142;
-      background: #e8f6f2;
-      border: 1px solid #b2ddd1;
-      padding: 8px 10px 7px;
-      border-radius: 10px;
-    }
-
-    .small-list {
-      margin: 8px 0 0;
-      padding-left: 18px;
-    }
-
     .match-list {
       margin: 8px 0 0;
       display: grid;
@@ -284,55 +251,6 @@
       flex: 0 0 auto;
     }
 
-    .result-details {
-      margin-top: 10px;
-      display: grid;
-      gap: 6px;
-      font-size: 0.98rem;
-    }
-
-    .selected-centre-name {
-      margin-top: 10px;
-      margin-bottom: 2px;
-      font-size: 1.9rem;
-      font-weight: 700;
-      line-height: 1.06;
-      color: #1f2b38;
-    }
-
-    .selected-centre-meta {
-      margin-top: 3px;
-      color: #586979;
-      font-size: 1rem;
-    }
-
-    .data-row {
-      display: grid;
-      grid-template-columns: 132px 1fr;
-      align-items: center;
-      gap: 8px;
-      border-top: 1px dashed #d7e2ea;
-      padding-top: 8px;
-      margin-top: 2px;
-    }
-
-    .data-label {
-      font-weight: 700;
-      color: #334a58;
-    }
-
-    .data-value {
-      color: #1c2630;
-      word-break: break-word;
-    }
-
-    .inline-map-btn {
-      margin-left: 8px;
-      padding: 3px 9px;
-      font-size: 0.8rem;
-      border-radius: 6px;
-    }
-
     @media (max-width: 760px) {
       .container {
         margin: 18px auto;
@@ -341,19 +259,6 @@
 
       th, td {
         font-size: 0.92rem;
-      }
-
-      .selected-centre-name {
-        font-size: 1.5rem;
-      }
-
-      .result-code {
-        font-size: 1.55rem;
-      }
-
-      .data-row {
-        grid-template-columns: 1fr;
-        gap: 4px;
       }
     }
   </style>
@@ -366,7 +271,7 @@
       <p>Introdueix el codi de centre (8 digits) o el nom del centre per carregar tota la informacio disponible de la fitxa oficial.</p>
 
       <div class="controls">
-        <input id="code" type="text" placeholder="Ex: 08019472 o Institut XXV Olímpiada" />
+        <input id="code" type="text" placeholder="Ex: 08019472 o Institut XXV Olímpiada" autocomplete="off" />
         <button id="load">Carregar centre</button>
       </div>
 
