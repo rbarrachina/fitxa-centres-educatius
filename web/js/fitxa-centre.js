@@ -1,16 +1,231 @@
 (() => {
     const win = window;
     const apiBase = String(win.MAPES_API_BASE || "").trim().replace(/\/+$/, "");
+    const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
+    const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
+    const SOCRATA_SELECT = "*";
+    const KEY_LABELS = {
+        any: "Any",
+        curs: "Curs",
+        codi_centre: "Codi centre",
+        denominaci_completa: "Nom centre",
+        codi_naturalesa: "Codi naturalesa",
+        nom_naturalesa: "Naturalesa",
+        codi_titularitat: "Codi titularitat",
+        nom_titularitat: "Titularitat",
+        adre_a: "Adreça",
+        codi_postal: "Codi postal",
+        tel_fon: "Telèfon del centre",
+        codi_delegaci: "Codi delegació",
+        nom_delegaci: "Àrea Territorial",
+        codi_comarca: "Codi comarca",
+        nom_comarca: "Comarca",
+        codi_municipi: "Codi municipi",
+        codi_municipi_6: "Codi municipi (6)",
+        nom_municipi: "Població",
+        codi_districte_municipal: "Codi districte municipal",
+        nom_dm: "Nom districte municipal",
+        codi_localitat: "Codi localitat",
+        nom_localitat: "Localitat",
+        coordenades_utm_x: "Coordenada UTM X",
+        coordenades_utm_y: "Coordenada UTM Y",
+        coordenades_geo_x: "Coordenada Geo X",
+        coordenades_geo_y: "Coordenada Geo Y",
+        e_mail_centre: "Correu electrònic del centre",
+        url: "URL pàgina web centre",
+        imatge: "Imatge",
+        geo_1: "Geo 1",
+    };
+    const PRIORITY_KEYS = [
+        "any",
+        "curs",
+        "codi_naturalesa",
+        "nom_naturalesa",
+        "codi_titularitat",
+        "nom_titularitat",
+        "adre_a",
+        "codi_postal",
+        "tel_fon",
+        "codi_delegaci",
+        "nom_delegaci",
+        "codi_comarca",
+        "nom_comarca",
+        "codi_municipi",
+        "codi_municipi_6",
+        "nom_municipi",
+        "codi_districte_municipal",
+        "nom_dm",
+        "codi_localitat",
+        "nom_localitat",
+        "coordenades_utm_x",
+        "coordenades_utm_y",
+        "coordenades_geo_x",
+        "coordenades_geo_y",
+        "e_mail_centre",
+        "url",
+        "imatge",
+        "einf1c",
+        "einf2c",
+        "epri",
+        "eso",
+        "batx",
+        "aa01",
+        "cfpm",
+        "ppas",
+        "aa03",
+        "cfps",
+        "ee",
+        "ife",
+        "pfi",
+        "pa01",
+        "cfam",
+        "pa02",
+        "cfas",
+        "esdi",
+        "escm",
+        "escs",
+        "adr",
+        "crbc",
+        "idi",
+        "dane",
+        "danp",
+        "dans",
+        "muse",
+        "musp",
+        "muss",
+        "tegm",
+        "tegs",
+        "estr",
+        "adults",
+        "geo_1",
+    ];
     function apiUrl(path) {
         const normalizedPath = path.replace(/^\/+/, "");
         return apiBase ? `${apiBase}/${normalizedPath}` : normalizedPath;
     }
-    function buildNoJsonMessage() {
-        const isGithubPages = window.location.hostname.endsWith("github.io");
-        if (isGithubPages && !apiBase) {
-            return "A GitHub Pages falta backend. Defineix window.MAPES_API_BASE amb l'URL del backend (Render/Railway).";
+    function escapeSoql(value) {
+        return String(value || "").replaceAll("'", "''");
+    }
+    function normalizeWebUrl(value) {
+        const raw = String(value || "").trim();
+        if (!raw || raw === "0" || raw === "-")
+            return "";
+        return raw;
+    }
+    function asText(value) {
+        if (value === null || value === undefined)
+            return "";
+        if (typeof value === "string")
+            return value.trim();
+        if (typeof value === "number" || typeof value === "boolean")
+            return String(value);
+        try {
+            return JSON.stringify(value);
         }
-        return "El servidor ha retornat HTML en lloc de JSON.";
+        catch {
+            return String(value);
+        }
+    }
+    function toInt(value) {
+        const parsed = Number(asText(value));
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+    function prettifyKey(key) {
+        if (KEY_LABELS[key])
+            return KEY_LABELS[key];
+        return key
+            .replaceAll("_", " ")
+            .replace(/\b\w/g, (m) => m.toUpperCase());
+    }
+    function pickBestRow(rows) {
+        if (!rows.length)
+            return null;
+        const sorted = [...rows].sort((a, b) => {
+            const yearDiff = toInt(b.any) - toInt(a.any);
+            if (yearDiff !== 0)
+                return yearDiff;
+            const cursDiff = toInt(b.curs) - toInt(a.curs);
+            if (cursDiff !== 0)
+                return cursDiff;
+            const aScore = Object.values(a).filter((v) => asText(v)).length;
+            const bScore = Object.values(b).filter((v) => asText(v)).length;
+            return bScore - aScore;
+        });
+        return sorted[0];
+    }
+    function rowToOrderedFields(row) {
+        const fields = {};
+        const ignored = new Set(["codi_centre", "denominaci_completa"]);
+        const keys = Object.keys(row).filter((k) => !ignored.has(k));
+        const priorityPresent = PRIORITY_KEYS.filter((k) => keys.includes(k));
+        const rest = keys
+            .filter((k) => !priorityPresent.includes(k))
+            .sort((a, b) => a.localeCompare(b, "ca"));
+        const ordered = [...priorityPresent, ...rest];
+        ordered.forEach((key) => {
+            const label = prettifyKey(key);
+            const value = asText(row[key]) || "-";
+            fields[label] = value;
+        });
+        return fields;
+    }
+    function buildNoJsonMessage() {
+        return "La resposta del servidor no és JSON vàlid.";
+    }
+    async function fetchSocrataRows(whereClause, limit) {
+        const query = `SELECT ${SOCRATA_SELECT} WHERE ${whereClause} ORDER BY any DESC, curs DESC LIMIT ${limit}`;
+        const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+        const raw = await response.text();
+        let rows = null;
+        try {
+            rows = JSON.parse(raw);
+        }
+        catch {
+            if (raw.trim().startsWith("<!DOCTYPE") || raw.trim().startsWith("<html")) {
+                throw new Error("L'API ha retornat HTML en lloc de JSON.");
+            }
+            throw new Error("Resposta no vàlida de l'API (no JSON).");
+        }
+        if (!response.ok) {
+            const message = Array.isArray(rows) ? "Error consultat l'API de dades obertes." : (rows?.message || "Error consultat l'API de dades obertes.");
+            throw new Error(message);
+        }
+        if (!Array.isArray(rows))
+            return [];
+        return rows;
+    }
+    function rowToFitxaData(code, row) {
+        if (!row) {
+            return {
+                status: "not_found",
+                requested_code: code,
+                source_url: SOCRATA_SOURCE_URL,
+                message: "No s'ha trobat cap centre amb aquest codi.",
+                fields: {},
+            };
+        }
+        const webValue = normalizeWebUrl(row.url);
+        const x = asText(row.coordenades_utm_x);
+        const y = asText(row.coordenades_utm_y);
+        const fields = rowToOrderedFields(row);
+        if (webValue)
+            fields["URL pàgina web centre"] = webValue;
+        if (x && y)
+            fields.Coordenades = `${x} X | ${y} Y`;
+        return {
+            status: "ok",
+            requested_code: code,
+            source_url: SOCRATA_SOURCE_URL,
+            centre: {
+                code: asText(row.codi_centre || code).trim(),
+                name: asText(row.denominaci_completa).trim() || "-",
+            },
+            coordinates: {
+                x,
+                y,
+            },
+            fields,
+        };
     }
     function byId(id) {
         return document.getElementById(id);
@@ -81,10 +296,18 @@
             const buildCellValue = (label, value) => {
                 const safeValue = value || "";
                 const isEmailField = /correu/i.test(label) && /@/.test(safeValue);
-                if (!isEmailField)
-                    return escapeHtml(safeValue);
+                const isWebField = /url|web/i.test(label);
+                const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
                 const escaped = escapeHtml(safeValue);
-                return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" type="button">Copiar</button></div>`;
+                if (isEmailField) {
+                    return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" type="button">Copiar</button></div>`;
+                }
+                if (webUrl) {
+                    const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
+                    const safeOpenUrl = escapeHtml(normalizedUrl);
+                    return `<div class="coord-with-map"><span>${escaped}</span><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web</button></div>`;
+                }
+                return escaped;
             };
             const row = (label, value) => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
             const buildCodeRow = (codeValue, sourceUrl) => {
@@ -146,46 +369,10 @@
                 metaEl.classList.remove("hidden");
                 metaEl.textContent = `Font: ${data.source_url || "-"} | Estat: ${data.status}`;
             };
-            const buildStaticFitxaResult = async (code) => {
-                if (!win.StaticCentres) {
-                    return {
-                        status: "not_found",
-                        requested_code: code,
-                        message: "No s'ha trobat el mòdul de dades estàtiques.",
-                        fields: {},
-                    };
-                }
-                const sourceUrl = await win.StaticCentres.sourceUrl();
-                const centre = await win.StaticCentres.byCode(code);
-                if (!centre) {
-                    return {
-                        status: "not_found",
-                        requested_code: code,
-                        source_url: sourceUrl,
-                        message: "No s'ha trobat cap centre amb aquest codi al dataset estàtic.",
-                        fields: {},
-                    };
-                }
-                const fields = {
-                    Població: centre.municipi || "-",
-                    "Correu electrònic del centre": centre.mail || "-",
-                    "Telèfon del centre": centre.phone || "-",
-                    "URL pàgina web centre": centre.web || "-",
-                    "Àrea Territorial": centre.territorial_area_st || "-",
-                    Naturalesa: centre.naturalesa || "-",
-                    Adreça: centre.address || "-",
-                };
-                if (centre.coord_x && centre.coord_y) {
-                    fields.Coordenades = `${centre.coord_x} X | ${centre.coord_y} Y`;
-                }
-                return {
-                    status: "ok",
-                    requested_code: code,
-                    source_url: sourceUrl,
-                    centre: { code: centre.code || code, name: centre.name || "-" },
-                    coordinates: { x: centre.coord_x || "", y: centre.coord_y || "" },
-                    fields,
-                };
+            const fetchFitxaFromSocrata = async (code) => {
+                const whereClause = `codi_centre = '${escapeSoql(code)}'`;
+                const rows = await fetchSocrataRows(whereClause, 5);
+                return rowToFitxaData(code, pickBestRow(rows));
             };
             const loadCentre = async () => {
                 const code = codeInput.value.trim();
@@ -199,13 +386,13 @@
                 loadButton.disabled = true;
                 try {
                     if (!apiBase) {
-                        const data = await buildStaticFitxaResult(code);
+                        const data = await fetchFitxaFromSocrata(code);
                         if (data.status !== "ok") {
                             setMessage(data.message || "No s'ha pogut carregar el centre.", true);
                             return;
                         }
                         renderData(data);
-                        setMessage("Dades carregades correctament (mode estàtic).");
+                        setMessage("Dades carregades correctament.");
                         return;
                     }
                     const response = await fetch(apiUrl(`api/centre/${code}`));
@@ -215,12 +402,7 @@
                         data = JSON.parse(raw);
                     }
                     catch {
-                        if (raw.trim().startsWith("<!DOCTYPE") || raw.trim().startsWith("<html")) {
-                            setMessage(buildNoJsonMessage(), true);
-                        }
-                        else {
-                            setMessage("Resposta no valida del servidor (no JSON).", true);
-                        }
+                        setMessage(buildNoJsonMessage(), true);
                         return;
                     }
                     if (!response.ok) {
@@ -271,10 +453,10 @@
                 const webButton = target.closest(".web-btn");
                 if (!webButton)
                     return;
-                const sourceUrl = webButton.dataset.sourceUrl || "";
-                if (!sourceUrl)
+                const openUrl = webButton.dataset.openUrl || webButton.dataset.sourceUrl || "";
+                if (!openUrl)
                     return;
-                window.open(sourceUrl, "_blank", "noopener,noreferrer");
+                window.open(openUrl, "_blank", "noopener,noreferrer");
             });
             codeInput.addEventListener("keydown", (event) => {
                 if (event.key === "Enter")

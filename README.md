@@ -43,10 +43,8 @@ Obre `http://127.0.0.1:8000` al navegador.
 ## GitHub Pages (estat actual)
 
 - La part visual (`web/`) es publica a GitHub Pages.
-- En mode Pages, l'app funciona en mode estàtic llegint `web/data/centres.json`.
-- El fitxer estàtic es regenera al workflow (`scripts/build_static_data.py`) des del dataset obert `kvmv-ahh4`.
-- El workflow també s'executa automàticament cada dia a les 04:00 UTC per refrescar dades.
-- Si configures `window.MAPES_API_BASE` a `web/index.html`, l'app torna a usar backend en viu (`api/...`).
+- En mode Pages, les cerques es fan en viu contra l'API de dades obertes `kvmv-ahh4`.
+- Si configures `window.MAPES_API_BASE` a `web/index.html`, l'app usa el backend (`api/...`) en lloc de consultar directament dades obertes.
 
 ## Estructura
 
