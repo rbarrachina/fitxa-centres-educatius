@@ -1,0 +1,15 @@
+{
+  "compilerOptions": {
+    "target": "ES2021",
+    "module": "none",
+    "lib": ["DOM", "ES2021"],
+    "rootDir": "web/ts",
+    "outDir": "web/js",
+    "strict": false,
+    "noImplicitAny": false,
+    "skipLibCheck": true,
+    "ignoreDeprecations": "5.0",
+    "sourceMap": false
+  },
+  "include": ["web/ts/**/*.ts"]
+}

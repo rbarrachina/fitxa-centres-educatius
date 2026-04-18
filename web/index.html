@@ -1,0 +1,445 @@
+<!doctype html>
+<html lang="ca">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Mapes de Centres Educatius</title>
+  <style>
+    :root {
+      --bg: #f4f6f8;
+      --panel: #ffffff;
+      --text: #1c2630;
+      --muted: #5f6b76;
+      --accent: #0a8f77;
+      --danger: #b23a48;
+      --border: #d7dde3;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Segoe UI", Tahoma, sans-serif;
+      background: linear-gradient(135deg, #f4f6f8, #e9eff4);
+      color: var(--text);
+      min-height: 100vh;
+    }
+
+    .container {
+      width: min(1000px, 92vw);
+      margin: 32px auto;
+      background: var(--panel);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 24px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.06);
+    }
+
+    .menu {
+      display: flex;
+      gap: 8px;
+      margin-bottom: 14px;
+      flex-wrap: wrap;
+    }
+
+    .menu-btn {
+      background: #e7eef3;
+      color: var(--text);
+      border: 1px solid var(--border);
+    }
+
+    .menu-btn.active {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    h1 {
+      margin: 0 0 16px;
+      font-size: 1.6rem;
+      letter-spacing: 0.02em;
+    }
+
+    p {
+      margin: 0 0 16px;
+      color: var(--muted);
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+
+    input {
+      width: 220px;
+      max-width: 100%;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      font-size: 1rem;
+    }
+
+    button {
+      border: 0;
+      border-radius: 8px;
+      background: var(--accent);
+      color: #fff;
+      padding: 10px 16px;
+      cursor: pointer;
+      font-weight: 600;
+    }
+
+    button:disabled {
+      opacity: 0.7;
+      cursor: wait;
+    }
+
+    .message {
+      margin-bottom: 14px;
+      min-height: 1.2em;
+      color: var(--muted);
+    }
+
+    .message.error {
+      color: var(--danger);
+    }
+
+    .meta {
+      margin-bottom: 12px;
+      font-size: 0.96rem;
+      color: var(--muted);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      background: #fff;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    th, td {
+      text-align: left;
+      padding: 10px;
+      border-bottom: 1px solid var(--border);
+      vertical-align: top;
+    }
+
+    th {
+      width: 38%;
+      background: #f7fafb;
+      font-weight: 600;
+    }
+
+    .value-with-copy {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .copy-btn {
+      padding: 4px 10px;
+      font-size: 0.82rem;
+      border-radius: 6px;
+    }
+
+    .coord-with-map {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .map-btn {
+      padding: 4px 10px;
+      font-size: 0.82rem;
+      border-radius: 6px;
+    }
+
+    .modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0, 0, 0, 0.45);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px;
+      z-index: 20;
+    }
+
+    .modal {
+      width: min(760px, 96vw);
+      background: #fff;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      box-shadow: 0 12px 28px rgba(0, 0, 0, 0.2);
+      overflow: hidden;
+    }
+
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 10px 12px;
+      border-bottom: 1px solid var(--border);
+      background: #f7fafb;
+      font-weight: 600;
+    }
+
+    .modal-body {
+      padding: 10px 12px 14px;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 10px;
+      flex-wrap: wrap;
+    }
+
+    .modal-map {
+      width: 100%;
+      height: 440px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+    }
+
+    tr:last-child td, tr:last-child th {
+      border-bottom: 0;
+    }
+
+    .hidden {
+      display: none;
+    }
+
+    .result-box {
+      border: 1px solid #c7d2dc;
+      background:
+        radial-gradient(circle at top right, rgba(10, 143, 119, 0.08), transparent 38%),
+        #f9fcfe;
+      border-radius: 14px;
+      padding: 16px;
+      margin-top: 10px;
+    }
+
+    .result-title {
+      font-size: 0.9rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #3f5a69;
+      margin-bottom: 8px;
+    }
+
+    .result-code {
+      display: inline-block;
+      margin-top: 2px;
+      font-size: 2.05rem;
+      line-height: 1;
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      color: #163142;
+      background: #e8f6f2;
+      border: 1px solid #b2ddd1;
+      padding: 8px 10px 7px;
+      border-radius: 10px;
+    }
+
+    .small-list {
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }
+
+    .match-list {
+      margin: 8px 0 0;
+      display: grid;
+      gap: 6px;
+      max-height: 250px;
+      overflow: auto;
+      padding-right: 4px;
+    }
+
+    .match-row {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 10px;
+      background: #fff;
+    }
+
+    .match-name {
+      font-weight: 700;
+      color: #23313d;
+    }
+
+    .match-town {
+      color: #4e6070;
+      font-weight: 500;
+    }
+
+    .match-view-btn {
+      padding: 4px 10px;
+      font-size: 0.84rem;
+      border-radius: 6px;
+      flex: 0 0 auto;
+    }
+
+    .result-details {
+      margin-top: 10px;
+      display: grid;
+      gap: 6px;
+      font-size: 0.98rem;
+    }
+
+    .selected-centre-name {
+      margin-top: 10px;
+      margin-bottom: 2px;
+      font-size: 1.9rem;
+      font-weight: 700;
+      line-height: 1.06;
+      color: #1f2b38;
+    }
+
+    .selected-centre-meta {
+      margin-top: 3px;
+      color: #586979;
+      font-size: 1rem;
+    }
+
+    .data-row {
+      display: grid;
+      grid-template-columns: 132px 1fr;
+      align-items: center;
+      gap: 8px;
+      border-top: 1px dashed #d7e2ea;
+      padding-top: 8px;
+      margin-top: 2px;
+    }
+
+    .data-label {
+      font-weight: 700;
+      color: #334a58;
+    }
+
+    .data-value {
+      color: #1c2630;
+      word-break: break-word;
+    }
+
+    .inline-map-btn {
+      margin-left: 8px;
+      padding: 3px 9px;
+      font-size: 0.8rem;
+      border-radius: 6px;
+    }
+
+    @media (max-width: 760px) {
+      .container {
+        margin: 18px auto;
+        padding: 16px;
+      }
+
+      th, td {
+        font-size: 0.92rem;
+      }
+
+      .selected-centre-name {
+        font-size: 1.5rem;
+      }
+
+      .result-code {
+        font-size: 1.55rem;
+      }
+
+      .data-row {
+        grid-template-columns: 1fr;
+        gap: 4px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <main class="container">
+    <h1>Consulta de Centres Educatius</h1>
+
+    <nav class="menu">
+      <button id="menuFitxa" class="menu-btn active" type="button">Fitxa de centre</button>
+      <button id="menuMapa" class="menu-btn" type="button">Mapa escolar</button>
+    </nav>
+
+    <section id="sectionFitxa">
+      <p>Introdueix el codi de centre (8 digits) per carregar tota la informacio disponible de la fitxa oficial.</p>
+
+      <div class="controls">
+        <input id="code" type="text" maxlength="8" placeholder="Ex: 08019472" inputmode="numeric" />
+        <button id="load">Carregar centre</button>
+      </div>
+
+      <div id="message" class="message"></div>
+      <div id="meta" class="meta hidden"></div>
+
+      <table id="resultTable" class="hidden">
+        <tbody id="resultBody"></tbody>
+      </table>
+    </section>
+
+    <section id="sectionMapa" class="hidden">
+      <p>Escriu el nom o el codi del centre i cercarem la informació a Mapa escolar.</p>
+      <div class="controls">
+        <input id="mapaCentreName" type="text" placeholder="Ex: Àuria o 08019472" />
+        <button id="mapaSearchBtn" type="button">Buscar centre</button>
+      </div>
+      <div id="mapaMessage" class="message"></div>
+      <div id="mapaResult" class="result-box hidden">
+        <div id="mapaResultTitle" class="result-title">Codi trobat</div>
+        <div id="mapaSelectedBlock">
+          <div id="mapaCode" class="result-code"></div>
+          <div id="mapaMatchedName" class="selected-centre-name"></div>
+          <div id="mapaCentreMeta" class="selected-centre-meta"></div>
+          <div class="result-details">
+            <div class="data-row"><span class="data-label">Mail</span><span class="data-value" id="mapaMail">-</span></div>
+            <div class="data-row"><span class="data-label">Telefon</span><span class="data-value" id="mapaPhone">-</span></div>
+            <div class="data-row"><span class="data-label">Web</span><span class="data-value" id="mapaWeb">-</span></div>
+            <div class="data-row"><span class="data-label">Àrea territorial (ST)</span><span class="data-value" id="mapaTerritorialArea">-</span></div>
+            <div class="data-row"><span class="data-label">Naturalesa</span><span class="data-value" id="mapaNaturalesa">-</span></div>
+            <div class="data-row"><span class="data-label">Coordenades</span><span class="data-value"><span id="mapaCoords">-</span> <button id="mapaCoordsMapLink" class="inline-map-btn hidden" type="button">Veure mapa</button></span></div>
+          </div>
+        </div>
+        <div id="mapaMoreMatchesWrap" class="hidden">
+          <div class="meta">Coincidencies trobades:</div>
+          <div id="mapaMoreMatches" class="match-list"></div>
+        </div>
+      </div>
+    </section>
+
+    <div id="mapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <span id="mapModalTitle">Ubicacio del centre</span>
+          <button id="closeMapModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-actions">
+            <a id="openMapLink" href="#" target="_blank" rel="noopener noreferrer">Obrir a OpenStreetMap</a>
+            <span id="mapCoordsLabel" class="meta"></span>
+          </div>
+          <iframe id="mapFrame" class="modal-map" title="Mapa del centre"></iframe>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <script src="./js/fitxa-centre.js"></script>
+  <script src="./js/mapa-escolar.js"></script>
+  <script src="./js/menu.js"></script>
+</body>
+</html>

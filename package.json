@@ -1,0 +1,17 @@
+{
+  "name": "mapes",
+  "version": "1.0.0",
+  "description": "Aplicacio inicial per carregar la fitxa de centres educatius des del portal de la Generalitat a partir del codi de centre.",
+  "main": "index.js",
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "build:watch": "tsc -p tsconfig.json --watch"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "devDependencies": {
+    "typescript": "^5.9.3"
+  }
+}
