@@ -142,6 +142,23 @@ th {
   border-radius: 6px;
 }
 
+.call-btn {
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  border-radius: 6px;
+  background: #3fae2a;
+}
+
+.call-btn:hover {
+  background: #348f23;
+}
+
+.phone-copy-btn {
+  padding: 4px 10px;
+  font-size: 0.82rem;
+  border-radius: 6px;
+}
+
 .web-btn {
   padding: 4px 10px;
   font-size: 0.82rem;

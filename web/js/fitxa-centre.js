@@ -114,6 +114,24 @@
             return "";
         return raw;
     }
+    function normalizePhoneNumber(value) {
+        const raw = String(value || "").trim();
+        if (!raw || raw === "-" || raw === "0")
+            return "";
+        const compact = raw.replaceAll(/\s+/g, "");
+        const sanitized = compact.replaceAll(/[^\d+]/g, "");
+        if (!sanitized)
+            return "";
+        const plusCount = (sanitized.match(/\+/g) || []).length;
+        if (plusCount > 1)
+            return "";
+        if (plusCount === 1 && !sanitized.startsWith("+"))
+            return "";
+        const digitsOnly = sanitized.replaceAll("+", "");
+        if (digitsOnly.length < 6)
+            return "";
+        return sanitized;
+    }
     function normalizeText(value) {
         return String(value || "")
             .normalize("NFD")
@@ -385,11 +403,17 @@
         const buildCellValue = (label, value) => {
             const safeValue = value || "";
             const isEmailField = /correu/i.test(label) && /@/.test(safeValue);
+            const isPhoneField = /telef|tel[eè]fon/i.test(label);
             const isWebField = /url|web/i.test(label);
+            const phoneNumber = isPhoneField ? normalizePhoneNumber(safeValue) : "";
             const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
             const escaped = escapeHtml(safeValue);
             if (isEmailField) {
                 return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" type="button">Copiar</button></div>`;
+            }
+            if (phoneNumber) {
+                const safePhone = escapeHtml(phoneNumber);
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="call-btn" data-call-number="${safePhone}" type="button">Trucar</button><button class="phone-copy-btn" data-copy-phone="${safePhone}" type="button">Copiar</button></div>`;
             }
             if (webUrl) {
                 const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
@@ -603,6 +627,28 @@
             const mapButton = target.closest(".map-btn");
             if (mapButton) {
                 openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "");
+                return;
+            }
+            const phoneCopyButton = target.closest(".phone-copy-btn");
+            if (phoneCopyButton) {
+                const phoneNumber = phoneCopyButton.dataset.copyPhone || "";
+                if (!phoneNumber)
+                    return;
+                try {
+                    await navigator.clipboard.writeText(phoneNumber);
+                    setMessage("Telefon copiat al porta-retalls.");
+                }
+                catch {
+                    setMessage("No s'ha pogut copiar el telefon.", true);
+                }
+                return;
+            }
+            const callButton = target.closest(".call-btn");
+            if (callButton) {
+                const phoneNumber = callButton.dataset.callNumber || "";
+                if (!phoneNumber)
+                    return;
+                window.location.href = `tel:${phoneNumber}`;
                 return;
             }
             const webButton = target.closest(".web-btn");
