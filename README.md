@@ -27,6 +27,8 @@ npm install
 npm run build
 ```
 
+Si modifiques `web/ts/fitxa-centre.ts`, torna a executar `npm run build` per regenerar `web/js/fitxa-centre.js`.
+
 Per provar-ho en local com a web estàtica:
 
 ```bash
@@ -58,6 +60,7 @@ API disponible:
 - `GET /api/centre/{codi}`
 
 Per forçar el frontend a usar backend, configura `window.MAPES_API_BASE` a `web/index.html`.
+En aquest mode, la cerca per nom no està activada: el backend actual només resol consultes per codi de centre.
 
 ## Estructura
 
@@ -66,3 +69,8 @@ Per forçar el frontend a usar backend, configura `window.MAPES_API_BASE` a `web
 - `web/js/fitxa-centre.js`: JavaScript compilat des de TypeScript.
 - `main.py`, `server.py`, `scraper.py`: backend opcional.
 - `.github/workflows/pages.yml`: build i desplegament de GitHub Pages.
+
+## Llicència
+
+Aquest projecte es distribueix sota la llicència `CC BY-SA 4.0`.
+Consulta [LICENSE](/Users/rafa/Documents/Repos/Mapes/LICENSE).
