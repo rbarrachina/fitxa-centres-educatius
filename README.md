@@ -1,4 +1,4 @@
-# Mapes de centres educatius
+# Fitxa de centres educatius
 
 Aplicació per consultar informació de centres educatius de Catalunya.
 

@@ -11,7 +11,7 @@ from scraper import fetch_centre_data
 BASE_DIR = Path(__file__).resolve().parent
 WEB_DIR = BASE_DIR / "web"
 
-app = FastAPI(title="Mapes de Centres Educatius")
+app = FastAPI(title="Fitxa de Centres Educatius")
 
 
 @app.get("/api/centre/{centre_code}")

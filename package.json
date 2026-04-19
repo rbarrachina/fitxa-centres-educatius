@@ -1,5 +1,5 @@
 {
-  "name": "mapes",
+  "name": "fitxa-centres-educatius",
   "version": "1.0.0",
   "description": "Aplicacio inicial per carregar la fitxa de centres educatius des del portal de la Generalitat a partir del codi de centre.",
   "scripts": {
