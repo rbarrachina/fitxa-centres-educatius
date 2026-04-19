@@ -653,7 +653,7 @@
 
         const webButton = target.closest(".web-btn") as HTMLButtonElement | null;
         if (!webButton) return;
-        const openUrl = webButton.dataset.openUrl || webButton.dataset.sourceUrl || "";
+        const openUrl = webButton.dataset.openUrl || "";
         if (!openUrl) return;
         window.open(openUrl, "_blank", "noopener,noreferrer");
       });
