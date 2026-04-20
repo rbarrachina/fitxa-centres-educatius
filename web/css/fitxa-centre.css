@@ -130,13 +130,13 @@ th {
 }
 
 .copy-btn-light {
-  background: #eef7ff;
-  color: #2f5d7c;
-  border: 1px solid #c9def0;
+  background: #eef9f1;
+  color: #2f6b44;
+  border: 1px solid #c7e8d1;
 }
 
 .copy-btn-light:hover {
-  background: #deefff;
+  background: #dff3e6;
 }
 
 .coord-with-map {
