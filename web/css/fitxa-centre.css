@@ -129,6 +129,16 @@ th {
   border-radius: 6px;
 }
 
+.copy-btn-light {
+  background: #eef7ff;
+  color: #2f5d7c;
+  border: 1px solid #c9def0;
+}
+
+.copy-btn-light:hover {
+  background: #deefff;
+}
+
 .coord-with-map {
   display: flex;
   align-items: center;
