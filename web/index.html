@@ -3,12 +3,18 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Fitxa de Centres Educatius</title>
+  <title>Consulta de Centres Educatius de Catalunya (Dades Obertes)</title>
+  <link
+    rel="stylesheet"
+    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
+    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
+    crossorigin=""
+  />
   <link rel="stylesheet" href="./css/fitxa-centre.css" />
 </head>
 <body>
   <main class="container">
-    <h1>Consulta de Centres Educatius</h1>
+    <h1>Consulta de Centres Educatius de Catalunya (Dades Obertes)</h1>
 
     <section id="sectionFitxa">
       <p>Introdueix el codi de centre (8 digits) o el nom del centre per carregar tota la informacio disponible de la fitxa oficial.</p>
@@ -41,16 +47,73 @@
             <a id="openMapLink" href="#" target="_blank" rel="noopener noreferrer">Obrir a OpenStreetMap</a>
             <span id="mapCoordsLabel" class="meta"></span>
           </div>
-          <iframe id="mapFrame" class="modal-map" title="Mapa del centre"></iframe>
+          <div id="mapLeaflet" class="modal-map" aria-label="Mapa del centre"></div>
         </div>
       </div>
     </div>
+
+    <div id="territorialMapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="territorialMapModalTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <span id="territorialMapModalTitle">Mapa del servei territorial</span>
+          <button id="closeTerritorialMapModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-actions">
+            <span id="territorialNameLabel" class="meta"></span>
+          </div>
+          <div id="territorialMap" class="modal-map"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="comarcaMapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="comarcaMapModalTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <span id="comarcaMapModalTitle">Mapa de la comarca</span>
+          <button id="closeComarcaMapModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-actions">
+            <span id="comarcaNameLabel" class="meta"></span>
+          </div>
+          <div id="comarcaMap" class="modal-map"></div>
+        </div>
+      </div>
+    </div>
+
+    <div id="municipiMapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="municipiMapModalTitle">
+      <div class="modal">
+        <div class="modal-header">
+          <span id="municipiMapModalTitle">Mapa del municipi</span>
+          <button id="closeMunicipiMapModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <div class="modal-actions">
+            <span id="municipiNameLabel" class="meta"></span>
+          </div>
+          <div id="municipiMap" class="modal-map"></div>
+        </div>
+      </div>
+    </div>
+
+    <p class="page-source">
+      Font:
+      <a href="https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4" target="_blank" rel="noopener noreferrer">
+        https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4
+      </a>
+    </p>
   </main>
 
   <script>
     // Per GitHub Pages, posa aqui el backend public (ex: https://fitxa-centres-educatius-api.onrender.com)
     window.MAPES_API_BASE = "";
   </script>
+  <script
+    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
+    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
+    crossorigin=""
+  ></script>
   <script src="./js/fitxa-centre.js?v=20260418-fitxa-only-2"></script>
 </body>
 </html>
