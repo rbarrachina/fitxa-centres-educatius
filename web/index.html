@@ -14,13 +14,14 @@
 </head>
 <body>
   <main class="container">
+    <button id="infoButton" class="info-button" type="button" aria-label="Informació">i</button>
     <h1>Consulta de Centres Educatius de Catalunya (Dades Obertes)</h1>
 
     <section id="sectionFitxa">
-      <p>Introdueix el codi de centre (8 digits) o el nom del centre per carregar tota la informacio disponible de la fitxa oficial.</p>
+      <p>Introdueix el codi de centre, el nom del centre o el municipi per carregar tota la informació disponible de la fitxa oficial.</p>
 
       <div class="controls">
-        <input id="code" type="text" placeholder="Codi o nom centre" autocomplete="off" />
+        <input id="code" type="text" placeholder="Codi, nom del centre o municipi" autocomplete="off" />
         <button id="load">Carregar centre</button>
       </div>
 
@@ -39,7 +40,7 @@
     <div id="mapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
       <div class="modal">
         <div class="modal-header">
-          <span id="mapModalTitle">Ubicacio del centre</span>
+          <span id="mapModalTitle">Ubicació del centre</span>
           <button id="closeMapModal" type="button">Tancar</button>
         </div>
         <div class="modal-body">
@@ -97,16 +98,34 @@
       </div>
     </div>
 
-    <p class="page-source">
-      Font:
-      <a href="https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4" target="_blank" rel="noopener noreferrer">
-        https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4
-      </a>
-    </p>
+    <div id="infoModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
+      <div class="modal info-modal">
+        <div class="modal-header">
+          <span id="infoModalTitle">Informació</span>
+          <button id="closeInfoModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body info-modal-body">
+          <p class="info-line">Rafa Barrachina</p>
+          <p class="info-line">2026</p>
+          <a
+            class="github-link"
+            href="https://github.com/rbarrachina/fitxa-centres-educatius"
+            target="_blank"
+            rel="noopener noreferrer"
+            aria-label="Repositori a GitHub"
+            title="Repositori a GitHub"
+          >
+            <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+              <path d="M12 2a10 10 0 0 0-3.162 19.49c.5.092.683-.217.683-.482 0-.238-.009-.868-.014-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.108-1.462-1.108-1.462-.907-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.53 2.341 1.088 2.91.833.091-.646.35-1.088.636-1.338-2.221-.253-4.555-1.11-4.555-4.944 0-1.092.39-1.985 1.03-2.685-.103-.254-.447-1.274.097-2.655 0 0 .84-.269 2.75 1.025a9.57 9.57 0 0 1 5.005 0c1.909-1.294 2.748-1.025 2.748-1.025.545 1.381.201 2.401.099 2.655.641.7 1.029 1.593 1.029 2.685 0 3.842-2.338 4.687-4.566 4.935.359.31.679.922.679 1.858 0 1.341-.012 2.422-.012 2.752 0 .268.18.579.688.481A10.002 10.002 0 0 0 12 2Z"/>
+            </svg>
+          </a>
+        </div>
+      </div>
+    </div>
   </main>
 
   <script>
-    // Per GitHub Pages, posa aqui el backend public (ex: https://fitxa-centres-educatius-api.onrender.com)
+    // Per GitHub Pages, posa aquí el backend públic (ex: https://fitxa-centres-educatius-api.onrender.com)
     window.MAPES_API_BASE = "";
   </script>
   <script
@@ -114,6 +133,6 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="./js/fitxa-centre.js?v=20260418-fitxa-only-2"></script>
+  <script src="./js/fitxa-centre.js?v=20260423-info-popup"></script>
 </body>
 </html>

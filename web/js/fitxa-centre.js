@@ -429,6 +429,9 @@
         const metaEl = byId("meta");
         const resultTable = byId("resultTable");
         const resultBody = byId("resultBody");
+        const infoButton = byId("infoButton");
+        const infoModalBackdrop = byId("infoModalBackdrop");
+        const closeInfoModalButton = byId("closeInfoModal");
         const mapModalBackdrop = byId("mapModalBackdrop");
         const closeMapModalButton = byId("closeMapModal");
         const mapLeafletContainer = byId("mapLeaflet");
@@ -448,15 +451,9 @@
         const municipiMapContainer = byId("municipiMap");
         let centreMap = null;
         let centreMapLayer = null;
-        let territorialMap = null;
-        let territorialLayer = null;
-        let territorialCentreLayer = null;
-        let comarcaMap = null;
-        let comarcaLayer = null;
-        let comarcaCentreLayer = null;
-        let municipiMap = null;
-        let municipiLayer = null;
-        let municipiCentreLayer = null;
+        const territorialMapState = { map: null, layer: null, centreLayer: null };
+        const comarcaMapState = { map: null, layer: null, centreLayer: null };
+        const municipiMapState = { map: null, layer: null, centreLayer: null };
         let territorialFeaturesPromise = null;
         let comarquesFeaturesPromise = null;
         let municipisFeaturesPromise = null;
@@ -479,7 +476,7 @@
             const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
             const escaped = escapeHtml(safeValue);
             if (isEmailField) {
-                return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" type="button">Copiar</button></div>`;
+                return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" data-copy-message="Correu copiat al porta-retalls." type="button">Copiar</button></div>`;
             }
             if (phoneNumber) {
                 const safePhone = escapeHtml(phoneNumber);
@@ -488,7 +485,7 @@
             if (webUrl) {
                 const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
                 const safeOpenUrl = escapeHtml(normalizedUrl);
-                return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn copy-btn-light" data-copy="${escaped}" type="button">Copiar</button><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web</button></div>`;
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn copy-btn-light" data-copy="${escaped}" data-copy-message="URL copiada al porta-retalls." type="button">Copiar</button><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web</button></div>`;
             }
             if (isAddressField) {
                 const mapX = escapeHtml(currentCentreForTerritorial?.x || "");
@@ -502,20 +499,20 @@
                 const centreName = escapeHtml(currentCentreForTerritorial?.name || "");
                 const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
                 const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
-                return `<div class="coord-with-map"><span>${escaped}</span><button class="territorial-map-btn" data-territorial-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Verure mapa</button></div>`;
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="territorial-map-btn" data-territorial-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button></div>`;
             }
             if (isComarcaField && safeValue && safeValue !== "-") {
                 const centreName = escapeHtml(currentCentreForTerritorial?.name || "");
                 const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
                 const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
-                return `<div class="coord-with-map"><span>${escaped}</span><button class="comarca-map-btn" data-comarca-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Verure mapa</button></div>`;
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="comarca-map-btn" data-comarca-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button></div>`;
             }
             if (isMunicipiField && safeValue && safeValue !== "-") {
                 const centreName = escapeHtml(currentCentreForTerritorial?.name || "");
                 const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
                 const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
                 const municipalityName = escapeHtml((currentMunicipalityForMap || safeValue).replace(/\s*\(.*\)\s*$/, ""));
-                return `<div class="coord-with-map"><span>${escaped}</span><button class="municipi-map-btn" data-municipi-name="${municipalityName}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Verure mapa</button></div>`;
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="municipi-map-btn" data-municipi-name="${municipalityName}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button></div>`;
             }
             return escaped;
         };
@@ -526,6 +523,12 @@
         };
         const closeMapModal = () => {
             mapModalBackdrop.classList.add("hidden");
+        };
+        const closeInfoModal = () => {
+            infoModalBackdrop.classList.add("hidden");
+        };
+        const openInfoModal = () => {
+            infoModalBackdrop.classList.remove("hidden");
         };
         const closeTerritorialMapModal = () => {
             territorialMapModalBackdrop.classList.add("hidden");
@@ -647,39 +650,71 @@
             }
             return null;
         };
-        const openTerritorialMapModal = async (territorialName, centreName, centreX, centreY) => {
-            territorialNameLabel.textContent = `Àrea Territorial: ${territorialName}`;
-            territorialMapModalBackdrop.classList.remove("hidden");
+        const getOrCreateLeafletMap = (state, container, leaflet) => {
+            if (state.map)
+                return state.map;
+            state.map = leaflet.map(container, {
+                zoomControl: true,
+                scrollWheelZoom: true,
+            });
+            leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+                attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
+                maxZoom: 18,
+            }).addTo(state.map);
+            return state.map;
+        };
+        const clearPolygonMapState = (state) => {
+            if (state.layer) {
+                state.layer.remove();
+                state.layer = null;
+            }
+            if (state.centreLayer) {
+                state.centreLayer.remove();
+                state.centreLayer = null;
+            }
+        };
+        const addCentreMarker = (leaflet, map, centreName, centreX, centreY) => {
+            const x = Number(centreX);
+            const y = Number(centreY);
+            if (!Number.isFinite(x) || !Number.isFinite(y))
+                return null;
+            const converted = utmToLatLon(31, x, y, true);
+            const markerLabel = (centreName || "Centre educatiu").trim() || "Centre educatiu";
+            const schoolIcon = leaflet.icon({
+                iconUrl: "assets/icona.png",
+                iconSize: [20, 30],
+                iconAnchor: [10, 29],
+                popupAnchor: [0, -24],
+                tooltipAnchor: [0, -24],
+            });
+            const centreLayer = leaflet.layerGroup().addTo(map);
+            leaflet
+                .marker([converted.lat, converted.lon], { icon: schoolIcon })
+                .bindTooltip(markerLabel, {
+                direction: "top",
+                offset: [0, -15],
+                opacity: 0.95,
+            })
+                .addTo(centreLayer);
+            return centreLayer;
+        };
+        const openPolygonMapModal = async (config, centreName, centreX, centreY) => {
+            config.label.textContent = `${config.labelPrefix}: ${config.name}`;
+            config.backdrop.classList.remove("hidden");
             const leaflet = window.L;
             if (!leaflet) {
-                setMessage("No s'ha pogut carregar el mapa territorial.", true);
+                setMessage(config.noLeafletMessage, true);
                 return;
             }
-            if (!territorialMap) {
-                territorialMap = leaflet.map(territorialMapContainer, {
-                    zoomControl: true,
-                    scrollWheelZoom: true,
-                });
-                leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
-                    maxZoom: 18,
-                }).addTo(territorialMap);
-            }
-            const features = await loadTerritorialFeatures();
-            if (territorialLayer) {
-                territorialLayer.remove();
-                territorialLayer = null;
-            }
-            if (territorialCentreLayer) {
-                territorialCentreLayer.remove();
-                territorialCentreLayer = null;
-            }
-            const selectedFeature = findTerritorialFeature(territorialName, features);
+            const map = getOrCreateLeafletMap(config.state, config.container, leaflet);
+            const features = await config.loadFeatures();
+            clearPolygonMapState(config.state);
+            const selectedFeature = config.findFeature(config.name, features);
             if (!selectedFeature) {
-                setMessage("No s'ha trobat el polígon del servei territorial.", true);
+                setMessage(config.missingMessage, true);
                 return;
             }
-            territorialLayer = leaflet
+            const polygonLayer = leaflet
                 .geoJSON(selectedFeature, {
                 style: {
                     color: "#a8141a",
@@ -689,179 +724,55 @@
                     fillOpacity: 0.32,
                 },
             })
-                .addTo(territorialMap);
-            const x = Number(centreX);
-            const y = Number(centreY);
-            if (Number.isFinite(x) && Number.isFinite(y)) {
-                const converted = utmToLatLon(31, x, y, true);
-                const markerLabel = (centreName || "Centre educatiu").trim() || "Centre educatiu";
-                const schoolIcon = leaflet.icon({
-                    iconUrl: "assets/icona.png",
-                    iconSize: [20, 30],
-                    iconAnchor: [10, 29],
-                    popupAnchor: [0, -24],
-                    tooltipAnchor: [0, -24],
-                });
-                territorialCentreLayer = leaflet.layerGroup().addTo(territorialMap);
-                leaflet
-                    .marker([converted.lat, converted.lon], { icon: schoolIcon })
-                    .bindTooltip(markerLabel, {
-                    direction: "top",
-                    offset: [0, -15],
-                    opacity: 0.95,
-                })
-                    .addTo(territorialCentreLayer);
-            }
+                .addTo(map);
+            config.state.layer = polygonLayer;
+            config.state.centreLayer = addCentreMarker(leaflet, map, centreName, centreX, centreY);
             window.setTimeout(() => {
-                territorialMap.invalidateSize();
-                territorialMap.fitBounds(territorialLayer.getBounds(), { padding: [20, 20] });
+                map.invalidateSize();
+                map.fitBounds(polygonLayer.getBounds(), { padding: [20, 20] });
             }, 0);
         };
-        const openComarcaMapModal = async (comarcaName, centreName, centreX, centreY) => {
-            comarcaNameLabel.textContent = `Comarca: ${comarcaName}`;
-            comarcaMapModalBackdrop.classList.remove("hidden");
-            const leaflet = window.L;
-            if (!leaflet) {
-                setMessage("No s'ha pogut carregar el mapa de comarca.", true);
-                return;
-            }
-            if (!comarcaMap) {
-                comarcaMap = leaflet.map(comarcaMapContainer, {
-                    zoomControl: true,
-                    scrollWheelZoom: true,
-                });
-                leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
-                    maxZoom: 18,
-                }).addTo(comarcaMap);
-            }
-            const features = await loadComarquesFeatures();
-            if (comarcaLayer) {
-                comarcaLayer.remove();
-                comarcaLayer = null;
-            }
-            if (comarcaCentreLayer) {
-                comarcaCentreLayer.remove();
-                comarcaCentreLayer = null;
-            }
-            const selectedFeature = findComarcaFeature(comarcaName, features);
-            if (!selectedFeature) {
-                setMessage("No s'ha trobat el polígon de la comarca.", true);
-                return;
-            }
-            comarcaLayer = leaflet
-                .geoJSON(selectedFeature, {
-                style: {
-                    color: "#a8141a",
-                    weight: 2,
-                    opacity: 0.9,
-                    fillColor: "#d8232a",
-                    fillOpacity: 0.32,
-                },
-            })
-                .addTo(comarcaMap);
-            const x = Number(centreX);
-            const y = Number(centreY);
-            if (Number.isFinite(x) && Number.isFinite(y)) {
-                const converted = utmToLatLon(31, x, y, true);
-                const markerLabel = (centreName || "Centre educatiu").trim() || "Centre educatiu";
-                const schoolIcon = leaflet.icon({
-                    iconUrl: "assets/icona.png",
-                    iconSize: [20, 30],
-                    iconAnchor: [10, 29],
-                    popupAnchor: [0, -24],
-                    tooltipAnchor: [0, -24],
-                });
-                comarcaCentreLayer = leaflet.layerGroup().addTo(comarcaMap);
-                leaflet
-                    .marker([converted.lat, converted.lon], { icon: schoolIcon })
-                    .bindTooltip(markerLabel, {
-                    direction: "top",
-                    offset: [0, -15],
-                    opacity: 0.95,
-                })
-                    .addTo(comarcaCentreLayer);
-            }
-            window.setTimeout(() => {
-                comarcaMap.invalidateSize();
-                comarcaMap.fitBounds(comarcaLayer.getBounds(), { padding: [20, 20] });
-            }, 0);
-        };
-        const openMunicipiMapModal = async (municipiName, centreName, centreX, centreY) => {
-            municipiNameLabel.textContent = `Municipi: ${municipiName}`;
-            municipiMapModalBackdrop.classList.remove("hidden");
-            const leaflet = window.L;
-            if (!leaflet) {
-                setMessage("No s'ha pogut carregar el mapa de municipi.", true);
-                return;
-            }
-            if (!municipiMap) {
-                municipiMap = leaflet.map(municipiMapContainer, {
-                    zoomControl: true,
-                    scrollWheelZoom: true,
-                });
-                leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-                    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
-                    maxZoom: 18,
-                }).addTo(municipiMap);
-            }
-            const features = await loadMunicipisFeatures();
-            if (municipiLayer) {
-                municipiLayer.remove();
-                municipiLayer = null;
-            }
-            if (municipiCentreLayer) {
-                municipiCentreLayer.remove();
-                municipiCentreLayer = null;
-            }
-            const selectedFeature = findMunicipiFeature(municipiName, features);
-            if (!selectedFeature) {
-                setMessage("No s'ha trobat el polígon del municipi.", true);
-                return;
-            }
-            municipiLayer = leaflet
-                .geoJSON(selectedFeature, {
-                style: {
-                    color: "#a8141a",
-                    weight: 2,
-                    opacity: 0.9,
-                    fillColor: "#d8232a",
-                    fillOpacity: 0.32,
-                },
-            })
-                .addTo(municipiMap);
-            const x = Number(centreX);
-            const y = Number(centreY);
-            if (Number.isFinite(x) && Number.isFinite(y)) {
-                const converted = utmToLatLon(31, x, y, true);
-                const markerLabel = (centreName || "Centre educatiu").trim() || "Centre educatiu";
-                const schoolIcon = leaflet.icon({
-                    iconUrl: "assets/icona.png",
-                    iconSize: [20, 30],
-                    iconAnchor: [10, 29],
-                    popupAnchor: [0, -24],
-                    tooltipAnchor: [0, -24],
-                });
-                municipiCentreLayer = leaflet.layerGroup().addTo(municipiMap);
-                leaflet
-                    .marker([converted.lat, converted.lon], { icon: schoolIcon })
-                    .bindTooltip(markerLabel, {
-                    direction: "top",
-                    offset: [0, -15],
-                    opacity: 0.95,
-                })
-                    .addTo(municipiCentreLayer);
-            }
-            window.setTimeout(() => {
-                municipiMap.invalidateSize();
-                municipiMap.fitBounds(municipiLayer.getBounds(), { padding: [20, 20] });
-            }, 0);
-        };
+        const openTerritorialMapModal = (territorialName, centreName, centreX, centreY) => openPolygonMapModal({
+            name: territorialName,
+            labelPrefix: "Àrea Territorial",
+            missingMessage: "No s'ha trobat el polígon del servei territorial.",
+            noLeafletMessage: "No s'ha pogut carregar el mapa territorial.",
+            backdrop: territorialMapModalBackdrop,
+            label: territorialNameLabel,
+            container: territorialMapContainer,
+            state: territorialMapState,
+            loadFeatures: loadTerritorialFeatures,
+            findFeature: findTerritorialFeature,
+        }, centreName, centreX, centreY);
+        const openComarcaMapModal = (comarcaName, centreName, centreX, centreY) => openPolygonMapModal({
+            name: comarcaName,
+            labelPrefix: "Comarca",
+            missingMessage: "No s'ha trobat el polígon de la comarca.",
+            noLeafletMessage: "No s'ha pogut carregar el mapa de comarca.",
+            backdrop: comarcaMapModalBackdrop,
+            label: comarcaNameLabel,
+            container: comarcaMapContainer,
+            state: comarcaMapState,
+            loadFeatures: loadComarquesFeatures,
+            findFeature: findComarcaFeature,
+        }, centreName, centreX, centreY);
+        const openMunicipiMapModal = (municipiName, centreName, centreX, centreY) => openPolygonMapModal({
+            name: municipiName,
+            labelPrefix: "Municipi",
+            missingMessage: "No s'ha trobat el polígon del municipi.",
+            noLeafletMessage: "No s'ha pogut carregar el mapa de municipi.",
+            backdrop: municipiMapModalBackdrop,
+            label: municipiNameLabel,
+            container: municipiMapContainer,
+            state: municipiMapState,
+            loadFeatures: loadMunicipisFeatures,
+            findFeature: findMunicipiFeature,
+        }, centreName, centreX, centreY);
         const openMapModal = (xValue, yValue, centreName) => {
             const x = Number(xValue);
             const y = Number(yValue);
             if (!Number.isFinite(x) || !Number.isFinite(y)) {
-                setMessage("Les coordenades no son valides.", true);
+                setMessage("Les coordenades no són vàlides.", true);
                 return;
             }
             const converted = utmToLatLon(31, x, y, true);
@@ -1073,11 +984,15 @@
             const rows = await fetchSocrataRows(whereClause, 5);
             return rowToFitxaData(code, pickBestRow(rows));
         };
-        const searchFitxaByNameFromSocrata = async (name) => {
+        const searchFitxaByTextFromSocrata = async (text) => {
             const allRows = dedupeByCode(await getCurrentCourseRows());
-            const needle = normalizeText(name);
-            const filtered = allRows.filter((row) => normalizeText(asText(row.denominaci_completa)).includes(needle));
-            return sortRowsByNameRelevance(filtered, name);
+            const needle = normalizeText(text);
+            const filtered = allRows.filter((row) => {
+                const centreName = normalizeText(asText(row.denominaci_completa));
+                const municipalityName = normalizeText(asText(row.nom_municipi));
+                return centreName.includes(needle) || municipalityName.includes(needle);
+            });
+            return sortRowsByNameRelevance(filtered, text);
         };
         const loadCentre = async () => {
             const query = codeInput.value.trim();
@@ -1086,14 +1001,14 @@
             resultTable.classList.add("hidden");
             metaEl.classList.add("hidden");
             if (!query) {
-                setMessage("Has d'indicar el codi o nom del centre.", true);
+                setMessage("Has d'indicar el codi, el nom del centre o el municipi.", true);
                 return;
             }
             const isCodeSearch = /^\d{8}$/.test(query);
             loadButton.disabled = true;
             try {
                 if (!isCodeSearch && apiBase) {
-                    setMessage("Amb backend extern, la fitxa per nom no està activada. Introdueix un codi de centre.", true);
+                    setMessage("Amb backend extern, la cerca per nom o municipi no està activada. Introdueix un codi de centre.", true);
                     return;
                 }
                 if (!apiBase) {
@@ -1107,9 +1022,9 @@
                         setMessage("");
                         return;
                     }
-                    const matches = await searchFitxaByNameFromSocrata(query);
+                    const matches = await searchFitxaByTextFromSocrata(query);
                     if (!matches.length) {
-                        setMessage("No s'ha trobat cap centre amb aquest nom.", true);
+                        setMessage("No s'ha trobat cap centre amb aquest nom o municipi.", true);
                         return;
                     }
                     if (matches.length === 1) {
@@ -1142,17 +1057,23 @@
                 setMessage("");
             }
             catch (error) {
-                setMessage(`Error de connexio: ${error.message}`, true);
+                setMessage(`Error de connexió: ${error.message}`, true);
             }
             finally {
                 loadButton.disabled = false;
             }
         };
         loadButton.addEventListener("click", loadCentre);
+        infoButton.addEventListener("click", openInfoModal);
+        closeInfoModalButton.addEventListener("click", closeInfoModal);
         closeMapModalButton.addEventListener("click", closeMapModal);
         closeTerritorialMapModalButton.addEventListener("click", closeTerritorialMapModal);
         closeComarcaMapModalButton.addEventListener("click", closeComarcaMapModal);
         closeMunicipiMapModalButton.addEventListener("click", closeMunicipiMapModal);
+        infoModalBackdrop.addEventListener("click", (event) => {
+            if (event.target === infoModalBackdrop)
+                closeInfoModal();
+        });
         mapModalBackdrop.addEventListener("click", (event) => {
             if (event.target === mapModalBackdrop)
                 closeMapModal();
@@ -1170,6 +1091,8 @@
                 closeMunicipiMapModal();
         });
         document.addEventListener("keydown", (event) => {
+            if (event.key === "Escape" && !infoModalBackdrop.classList.contains("hidden"))
+                closeInfoModal();
             if (event.key === "Escape" && !mapModalBackdrop.classList.contains("hidden"))
                 closeMapModal();
             if (event.key === "Escape" && !territorialMapModalBackdrop.classList.contains("hidden"))
@@ -1188,10 +1111,10 @@
                     return;
                 try {
                     await navigator.clipboard.writeText(text);
-                    setMessage("Correu copiat al porta-retalls.");
+                    setMessage(copyButton.dataset.copyMessage || "Text copiat al porta-retalls.");
                 }
                 catch {
-                    setMessage("No s'ha pogut copiar el correu.", true);
+                    setMessage("No s'ha pogut copiar el text.", true);
                 }
                 return;
             }
@@ -1239,10 +1162,10 @@
                     return;
                 try {
                     await navigator.clipboard.writeText(phoneNumber);
-                    setMessage("Telefon copiat al porta-retalls.");
+                    setMessage("Telèfon copiat al porta-retalls.");
                 }
                 catch {
-                    setMessage("No s'ha pogut copiar el telefon.", true);
+                    setMessage("No s'ha pogut copiar el telèfon.", true);
                 }
                 return;
             }
@@ -1285,7 +1208,7 @@
                 setMessage("Centre seleccionat correctament.");
             }
             catch (error) {
-                setMessage(`Error de connexio: ${error.message}`, true);
+                setMessage(`Error de connexió: ${error.message}`, true);
             }
             finally {
                 loadButton.disabled = false;

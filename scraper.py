@@ -112,7 +112,7 @@ def parse_centre_html(centre_code: str, html_text: str) -> dict:
             "requested_code": centre_code,
             "status": "not_found",
             "source_url": BASE_URL.format(code=centre_code),
-            "message": "No consta informacio per aquest centre.",
+            "message": "No consta informació per aquest centre.",
             "fields": {},
         }
 
