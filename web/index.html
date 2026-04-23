@@ -27,7 +27,6 @@
 
       <div id="message" class="message"></div>
       <div id="fitxaMatchesWrap" class="hidden">
-        <div class="meta">Coincidencies trobades:</div>
         <div id="fitxaMatches" class="match-list"></div>
       </div>
       <div id="meta" class="meta hidden"></div>
@@ -98,27 +97,72 @@
       </div>
     </div>
 
+    <div id="codesModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="codesModalTitle">
+      <div class="modal codes-modal">
+        <div class="modal-header">
+          <span id="codesModalTitle">Codis</span>
+          <button id="closeCodesModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <table class="codes-table">
+            <tbody id="codesModalBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="infoModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
       <div class="modal info-modal">
         <div class="modal-header">
-          <span id="infoModalTitle">Informació</span>
+          <span id="infoModalTitle">Informació de l'aplicació</span>
           <button id="closeInfoModal" type="button">Tancar</button>
         </div>
         <div class="modal-body info-modal-body">
-          <p class="info-line">Rafa Barrachina</p>
-          <p class="info-line">2026</p>
-          <a
-            class="github-link"
-            href="https://github.com/rbarrachina/fitxa-centres-educatius"
-            target="_blank"
-            rel="noopener noreferrer"
-            aria-label="Repositori a GitHub"
-            title="Repositori a GitHub"
-          >
-            <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
-              <path d="M12 2a10 10 0 0 0-3.162 19.49c.5.092.683-.217.683-.482 0-.238-.009-.868-.014-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.108-1.462-1.108-1.462-.907-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.53 2.341 1.088 2.91.833.091-.646.35-1.088.636-1.338-2.221-.253-4.555-1.11-4.555-4.944 0-1.092.39-1.985 1.03-2.685-.103-.254-.447-1.274.097-2.655 0 0 .84-.269 2.75 1.025a9.57 9.57 0 0 1 5.005 0c1.909-1.294 2.748-1.025 2.748-1.025.545 1.381.201 2.401.099 2.655.641.7 1.029 1.593 1.029 2.685 0 3.842-2.338 4.687-4.566 4.935.359.31.679.922.679 1.858 0 1.341-.012 2.422-.012 2.752 0 .268.18.579.688.481A10.002 10.002 0 0 0 12 2Z"/>
-            </svg>
-          </a>
+          <div class="info-card">
+            <p class="info-line info-line-author">
+              <span class="info-label">Autor:</span>
+              <span class="info-value"> Rafa Barrachina</span>
+              <a
+                class="github-inline-link"
+                href="https://github.com/rbarrachina/fitxa-centres-educatius"
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label="Repositori a GitHub"
+                title="Repositori a GitHub"
+              >
+                <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
+                  <path d="M12 2a10 10 0 0 0-3.162 19.49c.5.092.683-.217.683-.482 0-.238-.009-.868-.014-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.108-1.462-1.108-1.462-.907-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.53 2.341 1.088 2.91.833.091-.646.35-1.088.636-1.338-2.221-.253-4.555-1.11-4.555-4.944 0-1.092.39-1.985 1.03-2.685-.103-.254-.447-1.274.097-2.655 0 0 .84-.269 2.75 1.025a9.57 9.57 0 0 1 5.005 0c1.909-1.294 2.748-1.025 2.748-1.025.545 1.381.201 2.401.099 2.655.641.7 1.029 1.593 1.029 2.685 0 3.842-2.338 4.687-4.566 4.935.359.31.679.922.679 1.858 0 1.341-.012 2.422-.012 2.752 0 .268.18.579.688.481A10.002 10.002 0 0 0 12 2Z"/>
+                </svg>
+              </a>
+            </p>
+          </div>
+          <div class="info-card info-card-license">
+            <p class="info-line">
+              <span class="info-label">Llicència:</span>
+              <span class="info-value"> CC BY-SA 4.0</span>
+            </p>
+            <a
+              class="license-link"
+              href="https://creativecommons.org/licenses/by-sa/4.0/"
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label="Llicència Creative Commons BY-SA 4.0"
+              title="Llicència Creative Commons BY-SA 4.0"
+            >
+              <img
+                src="https://licensebuttons.net/l/by-sa/4.0/88x31.png"
+                alt="Creative Commons BY-SA 4.0"
+                width="88"
+                height="31"
+              />
+            </a>
+          </div>
+          <div class="info-card">
+            <p class="info-line">
+              <span class="info-label">Any:</span>
+              <span class="info-value"> 2026</span>
+            </p>
+          </div>
         </div>
       </div>
     </div>

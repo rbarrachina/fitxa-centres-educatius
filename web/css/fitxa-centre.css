@@ -65,18 +65,36 @@ body {
   background: #1f6540;
 }
 
-.info-modal {
-  width: min(360px, 92vw);
+.modal.info-modal {
+  width: min(380px, 92vw);
+}
+
+.modal.codes-modal {
+  width: min(560px, 94vw);
 }
 
 .info-modal-body {
   display: flex;
   flex-direction: column;
-  gap: 12px;
-  align-items: center;
-  text-align: center;
+  gap: 14px;
+  align-items: stretch;
+  text-align: left;
   padding-top: 16px;
   padding-bottom: 20px;
+}
+
+.info-card {
+  border: 1px solid #bfdcc7;
+  border-radius: 12px;
+  background: #f8fcf9;
+  padding: 14px 12px;
+}
+
+.info-card-license {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
 }
 
 .info-line {
@@ -85,28 +103,53 @@ body {
   font-weight: 600;
 }
 
-.github-link {
+.info-line-author {
+  display: flex;
+  align-items: center;
+}
+
+.info-label {
+  color: var(--text);
+  font-weight: 700;
+}
+
+.info-value {
+  color: #253a30;
+  font-weight: 500;
+  margin-left: 4px;
+}
+
+.github-inline-link {
   display: inline-flex;
-  width: 44px;
-  height: 44px;
+  width: 32px;
+  height: 32px;
+  margin-left: 8px;
+  vertical-align: middle;
   align-items: center;
   justify-content: center;
-  border-radius: 999px;
-  border: 1px solid var(--border);
-  background: #f3faf5;
+  border-radius: 6px;
   color: #133b26;
   transition: transform 0.16s ease, background-color 0.16s ease;
 }
 
-.github-link svg {
+.github-inline-link svg {
   width: 24px;
   height: 24px;
   fill: currentColor;
 }
 
-.github-link:hover {
+.github-inline-link:hover {
   background: #e6f5eb;
   transform: translateY(-1px);
+}
+
+.license-link {
+  display: inline-flex;
+  flex: 0 0 auto;
+}
+
+.codes-table {
+  box-shadow: none;
 }
 
 h1 {
@@ -249,14 +292,14 @@ tr:hover th {
   padding: 4px 10px;
   font-size: 0.82rem;
   border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  border: 1px solid transparent;
+  background: var(--button-soft-bg);
+  color: var(--button-soft-text);
+  border: 1px solid var(--button-soft-border);
   box-shadow: none;
 }
 
 .copy-btn:hover {
-  background: var(--accent-dark);
+  background: #dcefe2;
 }
 
 .copy-btn-light {
@@ -321,11 +364,15 @@ tr:hover th {
 }
 
 .call-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
   padding: 4px 10px;
   font-size: 0.82rem;
   border-radius: 6px;
   background: var(--accent);
   color: #fff;
+  text-decoration: none;
   border: 1px solid transparent;
   box-shadow: none;
 }
@@ -338,14 +385,14 @@ tr:hover th {
   padding: 4px 10px;
   font-size: 0.82rem;
   border-radius: 6px;
-  background: var(--accent);
-  color: #fff;
-  border: 1px solid transparent;
+  background: var(--button-soft-bg);
+  color: var(--button-soft-text);
+  border: 1px solid var(--button-soft-border);
   box-shadow: none;
 }
 
 .phone-copy-btn:hover {
-  background: var(--accent-dark);
+  background: #dcefe2;
 }
 
 .web-btn {

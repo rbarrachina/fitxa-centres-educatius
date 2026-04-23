@@ -449,6 +449,9 @@
         const closeMunicipiMapModalButton = byId("closeMunicipiMapModal");
         const municipiNameLabel = byId("municipiNameLabel");
         const municipiMapContainer = byId("municipiMap");
+        const codesModalBackdrop = byId("codesModalBackdrop");
+        const closeCodesModalButton = byId("closeCodesModal");
+        const codesModalBody = byId("codesModalBody");
         let centreMap = null;
         let centreMapLayer = null;
         const territorialMapState = { map: null, layer: null, centreLayer: null };
@@ -480,7 +483,7 @@
             }
             if (phoneNumber) {
                 const safePhone = escapeHtml(phoneNumber);
-                return `<div class="coord-with-map"><span>${escaped}</span><button class="call-btn" data-call-number="${safePhone}" type="button">Trucar</button><button class="phone-copy-btn" data-copy-phone="${safePhone}" type="button">Copiar</button></div>`;
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="phone-copy-btn" data-copy-phone="${safePhone}" type="button">Copiar</button><a class="call-btn" href="tel:${safePhone}">Trucar</a></div>`;
             }
             if (webUrl) {
                 const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
@@ -521,6 +524,7 @@
             const codeSafe = escapeHtml(codeValue || "");
             return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
         };
+        const buildCodesButtonRow = () => '<tr><th>Codis</th><td><button class="codes-btn" type="button">Veure codis</button></td></tr>';
         const closeMapModal = () => {
             mapModalBackdrop.classList.add("hidden");
         };
@@ -539,6 +543,12 @@
         const closeMunicipiMapModal = () => {
             municipiMapModalBackdrop.classList.add("hidden");
         };
+        const closeCodesModal = () => {
+            codesModalBackdrop.classList.add("hidden");
+        };
+        const openCodesModal = () => {
+            codesModalBackdrop.classList.remove("hidden");
+        };
         const normalizeTerritorialName = (value) => normalizeText(value)
             .replaceAll(/['’.,]/g, " ")
             .replaceAll(/\bserveis?\s+territorials?\s+(de|del|de la|de l)\b/g, " ")
@@ -556,6 +566,13 @@
             .replaceAll(/\bmunicipi\b/g, " ")
             .replaceAll(/\s+/g, " ")
             .trim();
+        const escapeRegExp = (value) => value.replaceAll(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const containsWholeTerm = (text, term) => {
+            if (!text || !term)
+                return false;
+            const pattern = new RegExp(`(^|\\s)${escapeRegExp(term)}(\\s|$)`);
+            return pattern.test(text);
+        };
         const getTerritorialAliases = (value) => {
             const normalized = normalizeTerritorialName(value);
             const aliases = [normalized];
@@ -645,7 +662,12 @@
                     continue;
                 if (featureName === target)
                     return feature;
-                if (featureName.includes(target) || target.includes(featureName))
+            }
+            for (const feature of features) {
+                const featureName = normalizeMunicipiName(asText(feature?.properties?.nom_muni || feature?.properties?.NOM_MUNI));
+                if (!featureName)
+                    continue;
+                if (containsWholeTerm(featureName, target))
                     return feature;
             }
             return null;
@@ -884,6 +906,40 @@
                 "Titularitat",
                 "Nom titularitat",
             ]);
+            const codes = [
+                {
+                    label: "Codi naturalesa",
+                    value: pullFieldByLabel(["Codi naturalesa"]),
+                },
+                {
+                    label: "Codi titularitat",
+                    value: pullFieldByLabel(["Codi titularitat"]),
+                },
+                {
+                    label: "Codi delegació",
+                    value: pullFieldByLabel(["Codi delegació", "Codi delegacio"]),
+                },
+                {
+                    label: "Codi comarca",
+                    value: pullFieldByLabel(["Codi comarca"]),
+                },
+                {
+                    label: "Codi municipi",
+                    value: pullFieldByLabel(["Codi municipi"]),
+                },
+                {
+                    label: "Codi municipi (6)",
+                    value: pullFieldByLabel(["Codi municipi (6)"]),
+                },
+                {
+                    label: "Codi districte municipal",
+                    value: pullFieldByLabel(["Codi districte municipal"]),
+                },
+                {
+                    label: "Codi localitat",
+                    value: pullFieldByLabel(["Codi localitat"]),
+                },
+            ];
             const postalCodeValue = pullFieldByLabel([
                 "Codi postal",
             ]);
@@ -920,6 +976,10 @@
                 "Localitat",
                 "Nom localitat",
             ]);
+            const districtNameValue = pullFieldByLabel([
+                "Nom districte municipal",
+                "Nom districte",
+            ]);
             const municipalityDisplay = municipalityValue && localityValue && normalizeText(municipalityValue) !== normalizeText(localityValue)
                 ? `${municipalityValue} (${localityValue})`
                 : municipalityValue || localityValue || "-";
@@ -933,11 +993,17 @@
             rows.push(row("Telèfon del centre", phoneValue || "-"));
             rows.push(row("Adreça", addressValue || "-"));
             rows.push(row("Municipi", municipalityDisplay));
+            if (districtNameValue)
+                rows.push(row("Nom districte municipal", districtNameValue));
             rows.push(row("Codi postal", postalCodeValue || "-"));
             rows.push(row("Àrea Territorial", territorialValue || "-"));
             rows.push(row("Comarca", comarcaValue || "-"));
             rows.push(row("Curs", cursValue || "-"));
             rows.push(row("Estudis", studies.length ? studies.join(" - ") : "-"));
+            rows.push(buildCodesButtonRow());
+            codesModalBody.innerHTML = codes
+                .map((code) => `<tr><th>${escapeHtml(code.label)}</th><td>${escapeHtml(code.value || "-")}</td></tr>`)
+                .join("");
             Object.entries(fields).forEach(([label, value]) => {
                 if (label === "Coordenades")
                     return;
@@ -1070,6 +1136,7 @@
         closeTerritorialMapModalButton.addEventListener("click", closeTerritorialMapModal);
         closeComarcaMapModalButton.addEventListener("click", closeComarcaMapModal);
         closeMunicipiMapModalButton.addEventListener("click", closeMunicipiMapModal);
+        closeCodesModalButton.addEventListener("click", closeCodesModal);
         infoModalBackdrop.addEventListener("click", (event) => {
             if (event.target === infoModalBackdrop)
                 closeInfoModal();
@@ -1090,6 +1157,10 @@
             if (event.target === municipiMapModalBackdrop)
                 closeMunicipiMapModal();
         });
+        codesModalBackdrop.addEventListener("click", (event) => {
+            if (event.target === codesModalBackdrop)
+                closeCodesModal();
+        });
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && !infoModalBackdrop.classList.contains("hidden"))
                 closeInfoModal();
@@ -1101,9 +1172,16 @@
                 closeComarcaMapModal();
             if (event.key === "Escape" && !municipiMapModalBackdrop.classList.contains("hidden"))
                 closeMunicipiMapModal();
+            if (event.key === "Escape" && !codesModalBackdrop.classList.contains("hidden"))
+                closeCodesModal();
         });
         resultBody.addEventListener("click", async (event) => {
             const target = event.target;
+            const codesButton = target.closest(".codes-btn");
+            if (codesButton) {
+                openCodesModal();
+                return;
+            }
             const copyButton = target.closest(".copy-btn");
             if (copyButton) {
                 const text = copyButton.dataset.copy || "";
@@ -1169,14 +1247,6 @@
                 }
                 return;
             }
-            const callButton = target.closest(".call-btn");
-            if (callButton) {
-                const phoneNumber = callButton.dataset.callNumber || "";
-                if (!phoneNumber)
-                    return;
-                window.location.href = `tel:${phoneNumber}`;
-                return;
-            }
             const webButton = target.closest(".web-btn");
             if (!webButton)
                 return;
@@ -1205,7 +1275,7 @@
                     return;
                 }
                 renderData(data);
-                setMessage("Centre seleccionat correctament.");
+                setMessage("");
             }
             catch (error) {
                 setMessage(`Error de connexió: ${error.message}`, true);

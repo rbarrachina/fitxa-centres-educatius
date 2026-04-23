@@ -4,7 +4,7 @@ import uvicorn
 
 
 def run_server(host: str = "127.0.0.1", port: int = 8000, reload: bool = False) -> None:
-    uvicorn.run("main:app", host=host, port=port, reload=reload)
+    uvicorn.run("backend.main:app", host=host, port=port, reload=reload)
 
 
 if __name__ == "__main__":

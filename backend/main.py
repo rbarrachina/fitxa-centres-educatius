@@ -6,10 +6,10 @@ from fastapi import FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.staticfiles import StaticFiles
 
-from scraper import fetch_centre_data
+from backend.scraper import fetch_centre_data
 
 BASE_DIR = Path(__file__).resolve().parent
-WEB_DIR = BASE_DIR / "web"
+WEB_DIR = BASE_DIR.parent / "web"
 
 app = FastAPI(title="Fitxa de Centres Educatius")
 

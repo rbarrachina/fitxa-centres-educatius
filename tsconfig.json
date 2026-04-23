@@ -3,7 +3,7 @@
     "target": "ES2021",
     "module": "none",
     "lib": ["DOM", "ES2021"],
-    "rootDir": "web/ts",
+    "rootDir": "src",
     "outDir": "web/js",
     "strict": false,
     "noImplicitAny": false,
@@ -11,5 +11,5 @@
     "ignoreDeprecations": "5.0",
     "sourceMap": false
   },
-  "include": ["web/ts/**/*.ts"]
+  "include": ["src/**/*.ts"]
 }

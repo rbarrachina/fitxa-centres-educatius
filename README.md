@@ -4,10 +4,12 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 
 ## Funcionalitats
 
-- Cerca per codi de centre (8 dígits) o per nom.
+- Cerca per codi de centre (8 dígits), nom del centre o municipi.
 - Selecció de centre quan hi ha múltiples coincidències.
 - Fitxa amb camps principals (nom, naturalesa, titularitat, adreça, municipi, etc.).
-- Botons d'acció (copiar, web, telèfon, veure mapa).
+- Botons d'acció (copiar, web, telèfon amb enllaç `tel:`, veure mapa).
+- Fila `Codis` amb botó `Veure codis` per obrir un popup amb codis administratius.
+- El camp `Nom districte municipal` només es mostra si té valor.
 - Mapes en modal:
   - ubicació del centre,
   - àrea territorial,
@@ -18,22 +20,21 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 
 ### Frontend (principal)
 
-- Aplicació estàtica a `web/`.
-- TypeScript font: `web/ts/fitxa-centre.ts`.
+- Aplicació estàtica publicable a `web/`.
+- TypeScript font: `src/fitxa-centre.ts`.
 - JavaScript compilat: `web/js/fitxa-centre.js`.
 - Estils: `web/css/fitxa-centre.css`.
 - Pàgina: `web/index.html`.
+- Entrada d'arrel per desenvolupament local: `index.html`, que redirigeix a `web/`.
 
 ### Backend (opcional)
 
-Existeix backend FastAPI (`main.py`, `server.py`, `scraper.py`) per mode servidor, però el flux principal actual és frontend estàtic.
+Existeix backend FastAPI opcional a `backend/` per mode servidor, però el flux principal actual és frontend estàtic.
 
 ## Requisits
 
 - Node.js 18+ (recomanat 20+)
 - npm
-
-Opcional (backend):
 - Python 3.10+
 
 ## Execució en local
@@ -45,19 +46,25 @@ npm install
 npm run build
 ```
 
-2. Servir el directori del projecte:
+2. Servir l'aplicació estàtica:
 
 ```bash
-python3 -m http.server 8000
+npm run serve
 ```
 
 3. Obrir:
 
-`http://127.0.0.1:8000/web/`
+`http://127.0.0.1:8000/`
+
+## Modes d'execució
+
+- Mode estàtic (principal): `npm run serve`
+- Mode backend opcional (FastAPI): `npm run backend`
+- Si es vol forçar ús de backend des del frontend estàtic, definir `window.MAPES_API_BASE` a `web/index.html`.
 
 ## Desenvolupament
 
-- Qualsevol canvi a `web/ts/fitxa-centre.ts` requereix recompilar:
+- Qualsevol canvi a `src/fitxa-centre.ts` requereix recompilar:
 
 ```bash
 npm run build
@@ -67,6 +74,13 @@ npm run build
 
 ```bash
 npm run build:watch
+```
+
+- Backend opcional:
+
+```bash
+pip install -r requirements.txt
+npm run backend
 ```
 
 ## Fonts externes de dades i serveis
