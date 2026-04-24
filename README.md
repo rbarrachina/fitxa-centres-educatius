@@ -144,7 +144,9 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
 
 ## Llicència del projecte
 
-Aquest repositori es distribueix sota **CC BY-SA 4.0**.
+Aquest repositori es distribueix sota **GNU Affero General Public License v3.0 or later (AGPL-3.0-or-later)**.
 
+- Copyright: `Copyright (C) 2026 Rafa Barrachina`
 - Fitxer local: `LICENSE`
-- URL: `https://creativecommons.org/licenses/by-sa/4.0/`
+- URL: `https://www.gnu.org/licenses/agpl-3.0.html`
+- Codi font: `https://github.com/rbarrachina/fitxa-centres-educatius`
