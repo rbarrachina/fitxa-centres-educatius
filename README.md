@@ -12,13 +12,16 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 - Fila `Estudis` amb botó `Veure matrícula` per obrir un popup amb la matrícula d'alumnes de l'últim curs disponible.
   - Mostra `Nom ensenyament`, `Nivell` i `Matrícula`.
   - Ordena els resultats per INF, PRIM, SEC, BATX, FP i altres.
+  - En idiomes, ordena els nivells com a bàsic, intermedi i avançat.
   - Inclou el curs de les dades, la data de l'última actualització del dataset i l'enllaç a la font.
+  - Si el curs del dataset no correspon al curs escolar actual, mostra un avís `⚠️`. El curs escolar es considera de l'1 de setembre al 31 d'agost.
 - El camp `Nom districte municipal` només es mostra si té valor.
 - Mapes en modal:
   - ubicació del centre,
   - àrea territorial,
   - comarca,
   - municipi.
+- Els popups no superen l'alçada de la finestra i mostren desplaçament vertical quan el contingut és llarg.
 
 ## Arquitectura
 
