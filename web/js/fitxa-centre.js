@@ -4,6 +4,9 @@
         .replace(/\/+$/, "");
     const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
     const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
+    const MATRICULA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/xvme-26kg.json";
+    const MATRICULA_METADATA_URL = "https://analisi.transparenciacatalunya.cat/api/views/xvme-26kg";
+    const MATRICULA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/Educaci-/Alumnes-matriculats-per-ensenyament-i-unitats-dels/xvme-26kg/about_data";
     const TERRITORIAL_SERVICES_URL = "data/serveis-territorials-simplificat.geojson";
     const COMARQUES_URL = "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson";
     const MUNICIPIS_URL = "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson";
@@ -196,6 +199,34 @@
         const parsed = Number(asText(value));
         return Number.isFinite(parsed) ? parsed : 0;
     }
+    function formatDateFromUnix(value) {
+        const seconds = Number(value);
+        if (!Number.isFinite(seconds) || seconds <= 0)
+            return "";
+        try {
+            return new Intl.DateTimeFormat("ca-ES", {
+                day: "2-digit",
+                month: "2-digit",
+                year: "numeric",
+            }).format(new Date(seconds * 1000));
+        }
+        catch {
+            return "";
+        }
+    }
+    function isCurrentDateInsideSchoolCourse(course, today = new Date()) {
+        const match = String(course || "").match(/^(\d{4})\s*\/\s*(\d{4})$/);
+        if (!match)
+            return true;
+        const startYear = Number(match[1]);
+        const endYear = Number(match[2]);
+        if (!Number.isFinite(startYear) || !Number.isFinite(endYear))
+            return true;
+        const currentDay = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+        const courseStart = new Date(startYear, 8, 1).getTime();
+        const courseEnd = new Date(endYear, 7, 31).getTime();
+        return currentDay >= courseStart && currentDay <= courseEnd;
+    }
     function prettifyKey(key) {
         if (KEY_LABELS[key])
             return KEY_LABELS[key];
@@ -338,6 +369,119 @@
         })();
         return currentCoursePromise;
     }
+    async function fetchEnrollmentDatasetInfo() {
+        const response = await fetch(MATRICULA_METADATA_URL);
+        const raw = await response.text();
+        let metadata = null;
+        try {
+            metadata = JSON.parse(raw);
+        }
+        catch {
+            throw new Error("No s'ha pogut llegir la metadata de matrícula.");
+        }
+        if (!response.ok) {
+            throw new Error(metadata?.message || "No s'ha pogut consultar la metadata de matrícula.");
+        }
+        const updatedAt = formatDateFromUnix(metadata?.rowsUpdatedAt || metadata?.viewLastModified || metadata?.publicationDate);
+        return {
+            updatedAt: updatedAt || "-",
+            sourceUrl: MATRICULA_SOURCE_URL,
+        };
+    }
+    async function getEnrollmentCourse() {
+        const query = "SELECT max(curs) as current_curs WHERE curs is not null";
+        const response = await fetch(`${MATRICULA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+        const raw = await response.text();
+        let rows = null;
+        try {
+            rows = JSON.parse(raw);
+        }
+        catch {
+            throw new Error("No s'ha pogut determinar l'últim curs de matrícula.");
+        }
+        if (!response.ok || !Array.isArray(rows) || !rows.length) {
+            throw new Error("No s'ha pogut determinar l'últim curs de matrícula.");
+        }
+        const current = asText(rows[0]?.current_curs);
+        if (!current) {
+            throw new Error("No s'ha pogut determinar l'últim curs de matrícula.");
+        }
+        return current;
+    }
+    function getEnrollmentSortRank(row) {
+        const code = normalizeText(`${asText(row.codi_estudis)} ${asText(row.codi_ensenyament)}`);
+        const name = normalizeText(`${asText(row.nom_ensenyament)} ${asText(row.nom_estudis)}`);
+        if (code.includes("einf") || name.includes("infantil"))
+            return 0;
+        if (code.includes("epri") || name.includes("primaria"))
+            return 1;
+        if (code.includes("eso") || name.includes("secundaria"))
+            return 2;
+        if (code.includes("batx") || name.includes("batxillerat"))
+            return 3;
+        if (code.includes("cfp") ||
+            code.includes("fp") ||
+            code.includes("pfi") ||
+            code.includes("ife") ||
+            name.includes("formacio professional") ||
+            name.includes("cicle formatiu") ||
+            name.includes("itinerari formatiu")) {
+            return 4;
+        }
+        return 5;
+    }
+    function sortEnrollmentRows(rows) {
+        const teachingBaseName = (row) => normalizeText(asText(row.nom_ensenyament)).replace(/\s*-\s*nivell\s+(basic|intermedi|avancat)\s*$/, "");
+        const languageLevelRank = (row) => {
+            const name = normalizeText(asText(row.nom_ensenyament));
+            if (name.includes("nivell basic"))
+                return 0;
+            if (name.includes("nivell intermedi"))
+                return 1;
+            if (name.includes("nivell avancat"))
+                return 2;
+            return 3;
+        };
+        return [...rows].sort((a, b) => {
+            const rankDiff = getEnrollmentSortRank(a) - getEnrollmentSortRank(b);
+            if (rankDiff !== 0)
+                return rankDiff;
+            const baseNameDiff = teachingBaseName(a).localeCompare(teachingBaseName(b), "ca");
+            if (baseNameDiff !== 0)
+                return baseNameDiff;
+            const levelRankDiff = languageLevelRank(a) - languageLevelRank(b);
+            if (levelRankDiff !== 0)
+                return levelRankDiff;
+            const nameDiff = asText(a.nom_ensenyament).localeCompare(asText(b.nom_ensenyament), "ca");
+            if (nameDiff !== 0)
+                return nameDiff;
+            return toInt(a.nivell) - toInt(b.nivell);
+        });
+    }
+    async function fetchEnrollmentRows(code) {
+        const [course, datasetInfo] = await Promise.all([getEnrollmentCourse(), fetchEnrollmentDatasetInfo()]);
+        const query = "SELECT codi_estudis, codi_ensenyament, nom_ensenyament, nivell, sum(matr_cules_total) as matricules_total " +
+            `WHERE curs = '${escapeSoql(course)}' AND codi_centre = '${escapeSoql(code)}' AND matr_cules_total is not null ` +
+            "GROUP BY codi_estudis, codi_ensenyament, nom_ensenyament, nivell LIMIT 5000";
+        const response = await fetch(`${MATRICULA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+        const raw = await response.text();
+        let rows = null;
+        try {
+            rows = JSON.parse(raw);
+        }
+        catch {
+            throw new Error("No s'ha pogut llegir la matrícula del centre.");
+        }
+        if (!response.ok) {
+            throw new Error(rows?.message || "No s'ha pogut consultar la matrícula del centre.");
+        }
+        return {
+            course,
+            updatedAt: datasetInfo.updatedAt,
+            rows: Array.isArray(rows) ? sortEnrollmentRows(rows) : [],
+            sourceUrl: datasetInfo.sourceUrl,
+        };
+    }
     function rowToFitxaData(code, row) {
         if (!row) {
             return {
@@ -452,6 +596,10 @@
         const codesModalBackdrop = byId("codesModalBackdrop");
         const closeCodesModalButton = byId("closeCodesModal");
         const codesModalBody = byId("codesModalBody");
+        const enrollmentModalBackdrop = byId("enrollmentModalBackdrop");
+        const closeEnrollmentModalButton = byId("closeEnrollmentModal");
+        const enrollmentDescription = byId("enrollmentDescription");
+        const enrollmentModalBody = byId("enrollmentModalBody");
         let centreMap = null;
         let centreMapLayer = null;
         const territorialMapState = { map: null, layer: null, centreLayer: null };
@@ -462,6 +610,7 @@
         let municipisFeaturesPromise = null;
         let currentCentreForTerritorial = null;
         let currentMunicipalityForMap = "";
+        let currentCentreCode = "";
         const setMessage = (text, isError = false) => {
             messageEl.textContent = text;
             messageEl.classList.toggle("error", isError);
@@ -525,6 +674,10 @@
             return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
         };
         const buildCodesButtonRow = () => '<tr><th>Codis</th><td><button class="codes-btn" type="button">Veure codis</button></td></tr>';
+        const buildEnrollmentButtonRow = (studiesValue) => {
+            const safeStudies = escapeHtml(studiesValue || "-");
+            return `<tr><th>Estudis</th><td><div class="coord-with-map"><span>${safeStudies}</span><button class="enrollment-btn" type="button">Veure matrícula</button></div></td></tr>`;
+        };
         const closeMapModal = () => {
             mapModalBackdrop.classList.add("hidden");
         };
@@ -548,6 +701,43 @@
         };
         const openCodesModal = () => {
             codesModalBackdrop.classList.remove("hidden");
+        };
+        const closeEnrollmentModal = () => {
+            enrollmentModalBackdrop.classList.add("hidden");
+        };
+        const openEnrollmentModal = async () => {
+            if (!currentCentreCode)
+                return;
+            enrollmentDescription.textContent = "Carregant matrícula...";
+            enrollmentModalBody.innerHTML = "";
+            enrollmentModalBackdrop.classList.remove("hidden");
+            try {
+                const enrollment = await fetchEnrollmentRows(currentCentreCode);
+                const courseWarning = isCurrentDateInsideSchoolCourse(enrollment.course)
+                    ? ""
+                    : " ⚠️";
+                enrollmentDescription.innerHTML =
+                    `Dades del curs ${escapeHtml(enrollment.course)}. ` +
+                        `${escapeHtml(courseWarning)} ` +
+                        `Última actualització: ${escapeHtml(enrollment.updatedAt)}. ` +
+                        `<a href="${escapeHtml(enrollment.sourceUrl)}" target="_blank" rel="noopener noreferrer">Font</a>`;
+                if (!enrollment.rows.length) {
+                    enrollmentModalBody.innerHTML = '<tr><td colspan="2">No hi ha dades de matrícula per a aquest centre en l\'últim curs.</td></tr>';
+                    return;
+                }
+                enrollmentModalBody.innerHTML = enrollment.rows
+                    .map((row) => {
+                    const name = escapeHtml(asText(row.nom_ensenyament) || "-");
+                    const level = escapeHtml(asText(row.nivell) || "-");
+                    const total = escapeHtml(asText(row.matricules_total) || "0");
+                    return `<tr><th>${name}</th><td>${level}</td><td>${total}</td></tr>`;
+                })
+                    .join("");
+            }
+            catch (error) {
+                enrollmentDescription.textContent = `Error de connexió: ${error.message}`;
+                enrollmentModalBody.innerHTML = "";
+            }
         };
         const normalizeTerritorialName = (value) => normalizeText(value)
             .replaceAll(/['’.,]/g, " ")
@@ -848,6 +1038,7 @@
             const fields = { ...(data.fields || {}) };
             const rows = [];
             const studies = [];
+            currentCentreCode = String((data.centre && data.centre.code) || data.requested_code || "").trim();
             currentCentreForTerritorial = {
                 name: (data.centre && data.centre.name) || "",
                 x: (data.coordinates && data.coordinates.x) || "",
@@ -999,7 +1190,7 @@
             rows.push(row("Àrea Territorial", territorialValue || "-"));
             rows.push(row("Comarca", comarcaValue || "-"));
             rows.push(row("Curs", cursValue || "-"));
-            rows.push(row("Estudis", studies.length ? studies.join(" - ") : "-"));
+            rows.push(buildEnrollmentButtonRow(studies.length ? studies.join(" - ") : "-"));
             rows.push(buildCodesButtonRow());
             codesModalBody.innerHTML = codes
                 .map((code) => `<tr><th>${escapeHtml(code.label)}</th><td>${escapeHtml(code.value || "-")}</td></tr>`)
@@ -1137,6 +1328,7 @@
         closeComarcaMapModalButton.addEventListener("click", closeComarcaMapModal);
         closeMunicipiMapModalButton.addEventListener("click", closeMunicipiMapModal);
         closeCodesModalButton.addEventListener("click", closeCodesModal);
+        closeEnrollmentModalButton.addEventListener("click", closeEnrollmentModal);
         infoModalBackdrop.addEventListener("click", (event) => {
             if (event.target === infoModalBackdrop)
                 closeInfoModal();
@@ -1161,6 +1353,10 @@
             if (event.target === codesModalBackdrop)
                 closeCodesModal();
         });
+        enrollmentModalBackdrop.addEventListener("click", (event) => {
+            if (event.target === enrollmentModalBackdrop)
+                closeEnrollmentModal();
+        });
         document.addEventListener("keydown", (event) => {
             if (event.key === "Escape" && !infoModalBackdrop.classList.contains("hidden"))
                 closeInfoModal();
@@ -1174,12 +1370,19 @@
                 closeMunicipiMapModal();
             if (event.key === "Escape" && !codesModalBackdrop.classList.contains("hidden"))
                 closeCodesModal();
+            if (event.key === "Escape" && !enrollmentModalBackdrop.classList.contains("hidden"))
+                closeEnrollmentModal();
         });
         resultBody.addEventListener("click", async (event) => {
             const target = event.target;
             const codesButton = target.closest(".codes-btn");
             if (codesButton) {
                 openCodesModal();
+                return;
+            }
+            const enrollmentButton = target.closest(".enrollment-btn");
+            if (enrollmentButton) {
+                await openEnrollmentModal();
                 return;
             }
             const copyButton = target.closest(".copy-btn");

@@ -9,6 +9,10 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 - Fitxa amb camps principals (nom, naturalesa, titularitat, adreça, municipi, etc.).
 - Botons d'acció (copiar, web, telèfon amb enllaç `tel:`, veure mapa).
 - Fila `Codis` amb botó `Veure codis` per obrir un popup amb codis administratius.
+- Fila `Estudis` amb botó `Veure matrícula` per obrir un popup amb la matrícula d'alumnes de l'últim curs disponible.
+  - Mostra `Nom ensenyament`, `Nivell` i `Matrícula`.
+  - Ordena els resultats per INF, PRIM, SEC, BATX, FP i altres.
+  - Inclou el curs de les dades, la data de l'última actualització del dataset i l'enllaç a la font.
 - El camp `Nom districte municipal` només es mostra si té valor.
 - Mapes en modal:
   - ubicació del centre,
@@ -91,17 +95,23 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
    - URL dataset: `https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4`
    - API usada: `https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json`
 
-2. Àrees territorials (fitxer local al repositori)
+2. Matrícula d'alumnes per ensenyament i nivell (Socrata)
+   - URL dataset: `https://analisi.transparenciacatalunya.cat/Educaci-/Alumnes-matriculats-per-ensenyament-i-unitats-dels/xvme-26kg/about_data`
+   - API usada: `https://analisi.transparenciacatalunya.cat/resource/xvme-26kg.json`
+   - Metadata usada per obtenir l'última actualització: `https://analisi.transparenciacatalunya.cat/api/views/xvme-26kg`
+   - La consulta usa només l'últim `curs` disponible i agrupa per centre, ensenyament i `nivell`.
+
+3. Àrees territorials (fitxer local al repositori)
    - Fitxer: `web/data/serveis-territorials-simplificat.geojson`
    - Origen del recurs: `https://github.com/rbarrachina/recollida_excedent`
 
-3. Comarques (ICGC Geoserveis)
+4. Comarques (ICGC Geoserveis)
    - Endpoint: `https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson`
 
-4. Municipis (ICGC Geoserveis)
+5. Municipis (ICGC Geoserveis)
    - Endpoint: `https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson`
 
-5. Cartografia base (Leaflet + OpenStreetMap tiles)
+6. Cartografia base (Leaflet + OpenStreetMap tiles)
    - Leaflet CDN: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js`
    - Tiles OSM: `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`
 
@@ -121,23 +131,29 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
 - Atribució indicada a metadata: `Institut Cartogràfic i Geològic de Catalunya (ICGC)`.
 - Enllaç d'atribució/llicències: `https://administraciodigital.gencat.cat/ca/dades/dades-obertes/informacio-practica/llicencies/`
 
-### 3) Geoinformació ICGC (serveis de comarca/municipi)
+### 3) Dataset de matrícula d'alumnes (`xvme-26kg`)
+
+- Metadata de l'API Socrata: `license.name = "See Terms of Use"`.
+- Atribució indicada a metadata: `Departament d'Educació`.
+- Enllaç d'atribució/llicències: `https://administraciodigital.gencat.cat/ca/dades/dades-obertes/informacio-practica/llicencies/`
+
+### 4) Geoinformació ICGC (serveis de comarca/municipi)
 
 - Pàgina oficial de reutilització ICGC: `https://www.icgc.cat/ca/LICGC/Informacio-publica/Transparencia/Reutilitzacio-de-la-informacio`
 - Segons aquesta pàgina, la llicència general de la geoinformació ICGC és **CC BY 4.0** (amb obligació de citació de la font).
 
-### 4) OpenStreetMap (cartografia base)
+### 5) OpenStreetMap (cartografia base)
 
 - Llicència de les dades: **Open Data Commons Open Database License (ODbL)**.
 - Pàgina oficial: `https://www.openstreetmap.org/copyright`
 - Cal mantenir atribució a OpenStreetMap contributors.
 
-### 5) Leaflet
+### 6) Leaflet
 
 - Llicència: **BSD 2-Clause**.
 - Fitxer oficial de llicència: `https://github.com/Leaflet/Leaflet/blob/main/LICENSE`
 
-### 6) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
+### 7) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
 
 - Origen: repositori `rbarrachina/recollida_excedent`.
 - El repositori inclou llicència **CC BY-SA 4.0** (fitxer `LICENSE`).

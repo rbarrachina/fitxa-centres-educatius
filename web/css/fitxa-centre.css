@@ -73,6 +73,10 @@ body {
   width: min(560px, 94vw);
 }
 
+.modal.enrollment-modal {
+  width: min(760px, 96vw);
+}
+
 .info-modal-body {
   display: flex;
   flex-direction: column;
@@ -193,6 +197,42 @@ body {
 
 .codes-table {
   box-shadow: none;
+}
+
+.enrollment-description {
+  margin: 0 0 10px;
+  color: var(--muted);
+}
+
+.enrollment-table {
+  box-shadow: none;
+}
+
+.enrollment-table th:first-child {
+  width: auto;
+}
+
+.enrollment-table th:nth-child(2),
+.enrollment-table td:nth-child(2) {
+  width: 72px;
+}
+
+.enrollment-table th,
+.enrollment-table td {
+  text-align: center;
+}
+
+.enrollment-table th:first-child,
+.enrollment-table td:first-child {
+  color: var(--accent-deep);
+  text-align: left;
+}
+
+.enrollment-table th:nth-child(2),
+.enrollment-table td:nth-child(2),
+.enrollment-table th:last-child,
+.enrollment-table td:last-child {
+  white-space: nowrap;
 }
 
 h1 {
@@ -384,7 +424,8 @@ tr:hover th {
 .map-btn,
 .territorial-map-btn,
 .comarca-map-btn,
-.municipi-map-btn {
+.municipi-map-btn,
+.enrollment-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
@@ -402,7 +443,8 @@ tr:hover th {
 
 .territorial-map-btn:hover,
 .comarca-map-btn:hover,
-.municipi-map-btn:hover {
+.municipi-map-btn:hover,
+.enrollment-btn:hover {
   background: var(--accent-dark);
 }
 
@@ -477,11 +519,14 @@ tr:hover th {
 
 .modal {
   width: min(760px, 96vw);
+  max-height: calc(100vh - 28px);
   background: var(--panel-strong);
   border-radius: 12px;
   border: 1px solid var(--border);
   box-shadow: 0 18px 42px rgba(14, 34, 25, 0.22);
   overflow: hidden;
+  display: flex;
+  flex-direction: column;
 }
 
 .modal-header {
@@ -496,6 +541,7 @@ tr:hover th {
 
 .modal-body {
   padding: 10px 12px 14px;
+  overflow-y: auto;
 }
 
 .modal-actions {

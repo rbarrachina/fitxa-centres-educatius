@@ -10,7 +10,7 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
-  <link rel="stylesheet" href="./css/fitxa-centre.css" />
+  <link rel="stylesheet" href="./css/fitxa-centre.css?v=20260427-matricula" />
 </head>
 <body>
   <main class="container">
@@ -111,6 +111,28 @@
       </div>
     </div>
 
+    <div id="enrollmentModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="enrollmentModalTitle">
+      <div class="modal enrollment-modal">
+        <div class="modal-header">
+          <span id="enrollmentModalTitle">Matrícula d'alumnes</span>
+          <button id="closeEnrollmentModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <p id="enrollmentDescription" class="enrollment-description"></p>
+          <table class="enrollment-table">
+            <thead>
+              <tr>
+                <th>Nom ensenyament</th>
+                <th>Nivell</th>
+                <th>Matrícula</th>
+              </tr>
+            </thead>
+            <tbody id="enrollmentModalBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
     <div id="infoModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
       <div class="modal info-modal">
         <div class="modal-header">
@@ -188,6 +210,6 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="./js/fitxa-centre.js?v=20260424-agpl-info-popup"></script>
+  <script src="./js/fitxa-centre.js?v=20260427-matricula"></script>
 </body>
 </html>
