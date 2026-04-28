@@ -470,7 +470,7 @@
   async function fetchEnrollmentRows(code: string): Promise<{ course: string; updatedAt: string; rows: SocrataRow[]; sourceUrl: string }> {
     const [course, datasetInfo] = await Promise.all([getEnrollmentCourse(), fetchEnrollmentDatasetInfo()]);
     const query =
-      "SELECT codi_estudis, codi_ensenyament, nom_ensenyament, nivell, sum(matr_cules_total) as matricules_total " +
+      "SELECT codi_estudis, codi_ensenyament, nom_ensenyament, nivell, sum(matr_cules_total) as matricules_total, sum(unitats) as grups " +
       `WHERE curs = '${escapeSoql(course)}' AND codi_centre = '${escapeSoql(code)}' AND matr_cules_total is not null ` +
       "GROUP BY codi_estudis, codi_ensenyament, nom_ensenyament, nivell LIMIT 5000";
     const response = await fetch(`${MATRICULA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
@@ -764,7 +764,8 @@
               const name = escapeHtml(asText(row.nom_ensenyament) || "-");
               const level = escapeHtml(asText(row.nivell) || "-");
               const total = escapeHtml(asText(row.matricules_total) || "0");
-              return `<tr><th>${name}</th><td>${level}</td><td>${total}</td></tr>`;
+              const groups = escapeHtml(asText(row.grups) || "0");
+              return `<tr><th>${name}</th><td>${level}</td><td>${total}</td><td>${groups}</td></tr>`;
             })
             .join("");
         } catch (error: any) {

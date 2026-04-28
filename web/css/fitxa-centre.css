@@ -206,6 +206,7 @@ body {
 
 .enrollment-table {
   box-shadow: none;
+  table-layout: fixed;
 }
 
 .enrollment-table th:first-child {
@@ -213,8 +214,12 @@ body {
 }
 
 .enrollment-table th:nth-child(2),
-.enrollment-table td:nth-child(2) {
-  width: 72px;
+.enrollment-table td:nth-child(2),
+.enrollment-table th:nth-child(3),
+.enrollment-table td:nth-child(3),
+.enrollment-table th:nth-child(4),
+.enrollment-table td:nth-child(4) {
+  width: 86px;
 }
 
 .enrollment-table th,
@@ -230,6 +235,8 @@ body {
 
 .enrollment-table th:nth-child(2),
 .enrollment-table td:nth-child(2),
+.enrollment-table th:nth-child(3),
+.enrollment-table td:nth-child(3),
 .enrollment-table th:last-child,
 .enrollment-table td:last-child {
   white-space: nowrap;

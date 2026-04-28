@@ -10,7 +10,7 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 - Botons d'acció (copiar, web, telèfon amb enllaç `tel:`, veure mapa).
 - Fila `Codis` amb botó `Veure codis` per obrir un popup amb codis administratius.
 - Fila `Estudis` amb botó `Veure matrícula` per obrir un popup amb la matrícula d'alumnes de l'últim curs disponible.
-  - Mostra `Nom ensenyament`, `Nivell` i `Matrícula`.
+  - Mostra `Nom ensenyament`, `Nivell`, `Matrícula` i `Grups`.
   - Ordena els resultats per INF, PRIM, SEC, BATX, FP i altres.
   - En idiomes, ordena els nivells com a bàsic, intermedi i avançat.
   - Inclou el curs de les dades, la data de l'última actualització del dataset i l'enllaç a la font.
@@ -103,6 +103,7 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
    - API usada: `https://analisi.transparenciacatalunya.cat/resource/xvme-26kg.json`
    - Metadata usada per obtenir l'última actualització: `https://analisi.transparenciacatalunya.cat/api/views/xvme-26kg`
    - La consulta usa només l'últim `curs` disponible i agrupa per centre, ensenyament i `nivell`.
+   - Mostra `matr_cules_total` com a matrícula i `unitats` com a grups.
 
 3. Àrees territorials (fitxer local al repositori)
    - Fitxer: `web/data/serveis-territorials-simplificat.geojson`
