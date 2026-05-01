@@ -5,6 +5,7 @@
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "build:watch": "tsc -p tsconfig.json --watch",
+    "build:serveis-educatius": "python3 scripts/build_serveis_educatius.py",
     "serve": "python3 -m http.server 8000 --directory web",
     "backend": "python3 -m backend.server"
   },

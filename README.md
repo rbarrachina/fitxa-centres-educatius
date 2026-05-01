@@ -15,6 +15,7 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
   - En idiomes, ordena els nivells com a bàsic, intermedi i avançat.
   - Inclou el curs de les dades, la data de l'última actualització del dataset i l'enllaç a la font.
   - Si el curs del dataset no correspon al curs escolar actual, mostra un avís `⚠️`. El curs escolar es considera de l'1 de setembre al 31 d'agost.
+- Fila `Servei educatiu` amb el Servei Educatiu de Zona associat i botó `Web SE` quan la font en proporciona l'URL.
 - El camp `Nom districte municipal` només es mostra si té valor.
 - Mapes en modal:
   - ubicació del centre,
@@ -83,6 +84,12 @@ npm run build
 npm run build:watch
 ```
 
+- Regenerar el fitxer local de Serveis Educatius de Zona:
+
+```bash
+npm run build:serveis-educatius
+```
+
 - Backend opcional:
 
 ```bash
@@ -109,13 +116,20 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
    - Fitxer: `web/data/serveis-territorials-simplificat.geojson`
    - Origen del recurs: `https://github.com/rbarrachina/recollida_excedent`
 
-4. Comarques (ICGC Geoserveis)
+4. Serveis Educatius de Zona (fitxer local al repositori)
+   - Fitxer: `web/data/serveis-educatius.json`
+   - Origen del recurs: `https://edumet.cat/areatac/presentacions/index_json.php?config=ConfigTotsSEZ&id=1l_0DXbgPhhoaHEA_oCdz2rR_6ZeVF0ZPWagyuZkOeq0`
+   - Full públic usat per generar-lo: `https://docs.google.com/spreadsheets/d/1l_0DXbgPhhoaHEA_oCdz2rR_6ZeVF0ZPWagyuZkOeq0/gviz/tq?tqx=out:csv&sheet=Serveis`
+   - Regeneració: `npm run build:serveis-educatius`
+   - La correspondència es fa per municipi; en el cas de Barcelona, per municipi i districte municipal.
+
+5. Comarques (ICGC Geoserveis)
    - Endpoint: `https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson`
 
-5. Municipis (ICGC Geoserveis)
+6. Municipis (ICGC Geoserveis)
    - Endpoint: `https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson`
 
-6. Cartografia base (Leaflet + OpenStreetMap tiles)
+7. Cartografia base (Leaflet + OpenStreetMap tiles)
    - Leaflet CDN: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js`
    - Tiles OSM: `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`
 
@@ -141,23 +155,29 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
 - Atribució indicada a metadata: `Departament d'Educació`.
 - Enllaç d'atribució/llicències: `https://administraciodigital.gencat.cat/ca/dades/dades-obertes/informacio-practica/llicencies/`
 
-### 4) Geoinformació ICGC (serveis de comarca/municipi)
+### 4) Serveis Educatius de Zona
+
+- Origen: mapa públic `Relació de Serveis Educatius`.
+- URL: `https://edumet.cat/areatac/presentacions/index_json.php?config=ConfigTotsSEZ&id=1l_0DXbgPhhoaHEA_oCdz2rR_6ZeVF0ZPWagyuZkOeq0`
+- Les condicions de reutilització depenen de la font original publicada.
+
+### 5) Geoinformació ICGC (serveis de comarca/municipi)
 
 - Pàgina oficial de reutilització ICGC: `https://www.icgc.cat/ca/LICGC/Informacio-publica/Transparencia/Reutilitzacio-de-la-informacio`
 - Segons aquesta pàgina, la llicència general de la geoinformació ICGC és **CC BY 4.0** (amb obligació de citació de la font).
 
-### 5) OpenStreetMap (cartografia base)
+### 6) OpenStreetMap (cartografia base)
 
 - Llicència de les dades: **Open Data Commons Open Database License (ODbL)**.
 - Pàgina oficial: `https://www.openstreetmap.org/copyright`
 - Cal mantenir atribució a OpenStreetMap contributors.
 
-### 6) Leaflet
+### 7) Leaflet
 
 - Llicència: **BSD 2-Clause**.
 - Fitxer oficial de llicència: `https://github.com/Leaflet/Leaflet/blob/main/LICENSE`
 
-### 7) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
+### 8) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
 
 - Origen: repositori `rbarrachina/recollida_excedent`.
 - El repositori inclou llicència **CC BY-SA 4.0** (fitxer `LICENSE`).

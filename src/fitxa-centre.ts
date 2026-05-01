@@ -5,6 +5,16 @@
     layer: any | null;
     centreLayer: any | null;
   };
+  type EducationalService = {
+    code: string;
+    sez_code: string;
+    name: string;
+    territorial_area: string;
+    headquarters_municipality: string;
+    district: string;
+    municipalities: string[];
+    web: string;
+  };
 
   const apiBase = String((window as Window & { MAPES_API_BASE?: string }).MAPES_API_BASE || "")
     .trim()
@@ -16,6 +26,7 @@
   const MATRICULA_METADATA_URL = "https://analisi.transparenciacatalunya.cat/api/views/xvme-26kg";
   const MATRICULA_SOURCE_URL =
     "https://analisi.transparenciacatalunya.cat/Educaci-/Alumnes-matriculats-per-ensenyament-i-unitats-dels/xvme-26kg/about_data";
+  const EDUCATIONAL_SERVICES_URL = "data/serveis-educatius.json";
   const TERRITORIAL_SERVICES_URL = "data/serveis-territorials-simplificat.geojson";
   const COMARQUES_URL =
     "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson";
@@ -23,6 +34,7 @@
     "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson";
   let currentCoursePromise: Promise<string> | null = null;
   let currentCourseRowsPromise: Promise<SocrataRow[]> | null = null;
+  let educationalServicesPromise: Promise<EducationalService[]> | null = null;
   const KEY_LABELS: Record<string, string> = {
     any: "Any",
     curs: "Curs",
@@ -194,6 +206,27 @@
       .replaceAll(/\s+/g, " ")
       .trim()
       .toLowerCase();
+  }
+
+  function normalizePlaceName(value: string): string {
+    const normalized = normalizeText(value)
+      .replaceAll(/[’']/g, " ")
+      .replaceAll(/[.,;:()/-]/g, " ")
+      .replaceAll(/\s+/g, " ")
+      .trim();
+    const trailingArticle = normalized.match(/^(.+?)\s*,?\s+(l|el|la|els|les)$/);
+    const articleMoved = trailingArticle ? `${trailingArticle[2]} ${trailingArticle[1]}` : normalized;
+    return articleMoved
+      .replace(/^(l|el|la|els|les)\s+/, "")
+      .replaceAll(/\s+/g, " ")
+      .trim();
+  }
+
+  function normalizeDistrictName(value: string): string {
+    return normalizePlaceName(value)
+      .replace(/^districte\s+(de\s+|del\s+|de la\s+|d\s+)?/, "")
+      .replaceAll(/\s+/g, " ")
+      .trim();
   }
 
   function asText(value: unknown): string {
@@ -492,6 +525,57 @@
     };
   }
 
+  async function fetchEducationalServices(): Promise<EducationalService[]> {
+    if (educationalServicesPromise) return educationalServicesPromise;
+    educationalServicesPromise = (async () => {
+      const response = await fetch(EDUCATIONAL_SERVICES_URL);
+      if (!response.ok) throw new Error("No s'ha pogut carregar la relació de serveis educatius.");
+      const payload = await response.json();
+      return Array.isArray(payload?.services) ? payload.services as EducationalService[] : [];
+    })();
+    return educationalServicesPromise;
+  }
+
+  function serviceMatchesMunicipality(service: EducationalService, municipality: string): boolean {
+    const target = normalizePlaceName(municipality);
+    if (!target) return false;
+    return (service.municipalities || []).some((item) => normalizePlaceName(item) === target);
+  }
+
+  function serviceMatchesDistrict(service: EducationalService, district: string): boolean {
+    const target = normalizeDistrictName(district);
+    if (!target) return false;
+    return normalizeDistrictName(service.district) === target;
+  }
+
+  async function resolveEducationalService(row: SocrataRow): Promise<EducationalService | null> {
+    const municipality = asText(row.nom_municipi);
+    if (!municipality) return null;
+
+    const services = await fetchEducationalServices();
+    const municipalityMatches = services.filter((service) => serviceMatchesMunicipality(service, municipality));
+    if (!municipalityMatches.length) return null;
+    if (municipalityMatches.length === 1) return municipalityMatches[0];
+
+    const district = asText(row.nom_dm);
+    if (district) {
+      const districtMatch = municipalityMatches.find((service) => serviceMatchesDistrict(service, district));
+      if (districtMatch) return districtMatch;
+    }
+
+    return null;
+  }
+
+  async function attachEducationalService(data: any, row: SocrataRow | null): Promise<any> {
+    if (!row || data.status !== "ok") return data;
+    try {
+      data.educational_service = await resolveEducationalService(row);
+    } catch {
+      data.educational_service = null;
+    }
+    return data;
+  }
+
   function rowToFitxaData(code: string, row: SocrataRow | null): any {
     if (!row) {
       return {
@@ -707,6 +791,15 @@
       const buildEnrollmentButtonRow = (studiesValue: string): string => {
         const safeStudies = escapeHtml(studiesValue || "-");
         return `<tr><th>Estudis</th><td><div class="coord-with-map"><span>${safeStudies}</span><button class="enrollment-btn" type="button">Veure matrícula</button></div></td></tr>`;
+      };
+      const buildEducationalServiceRow = (service: EducationalService | null): string => {
+        const name = service?.name || "-";
+        const safeName = escapeHtml(name);
+        const webUrl = normalizeWebUrl(service?.web || "");
+        if (!webUrl) return row("Servei educatiu", name);
+        const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
+        const safeOpenUrl = escapeHtml(normalizedUrl);
+        return `<tr><th>Servei educatiu</th><td><div class="coord-with-map"><span>${safeName}</span><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web SE</button></div></td></tr>`;
       };
 
       const closeMapModal = (): void => {
@@ -1266,6 +1359,7 @@
         if (districtNameValue) rows.push(row("Nom districte municipal", districtNameValue));
         rows.push(row("Codi postal", postalCodeValue || "-"));
         rows.push(row("Àrea Territorial", territorialValue || "-"));
+        rows.push(buildEducationalServiceRow(data.educational_service || null));
         rows.push(row("Comarca", comarcaValue || "-"));
         rows.push(row("Curs", cursValue || "-"));
         rows.push(buildEnrollmentButtonRow(studies.length ? studies.join(" - ") : "-"));
@@ -1318,7 +1412,8 @@
       const fetchFitxaFromSocrata = async (code: string): Promise<any> => {
         const whereClause = `codi_centre = '${escapeSoql(code)}'`;
         const rows = await fetchSocrataRows(whereClause, 5);
-        return rowToFitxaData(code, pickBestRow(rows));
+        const selected = pickBestRow(rows);
+        return attachEducationalService(rowToFitxaData(code, selected), selected);
       };
 
       const searchFitxaByTextFromSocrata = async (text: string): Promise<SocrataRow[]> => {
@@ -1373,7 +1468,7 @@
             if (matches.length === 1) {
               const selected = matches[0];
               const code = asText(selected.codi_centre);
-              const data = rowToFitxaData(code, selected);
+              const data = await attachEducationalService(rowToFitxaData(code, selected), selected);
               renderData(data);
               setMessage("");
               return;
