@@ -1,6 +1,6 @@
 # Consulta de Centres Educatius de Catalunya (Dades Obertes)
 
-Aplicació web per consultar fitxes de centres educatius de Catalunya i visualitzar-ne la ubicació sobre mapa (centre, àrea territorial, comarca i municipi).
+Aplicació web per consultar fitxes de centres educatius de Catalunya i visualitzar-ne la ubicació sobre mapa (centre, àrea territorial, servei educatiu, comarca i municipi).
 
 ## Funcionalitats
 
@@ -15,11 +15,12 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
   - En idiomes, ordena els nivells com a bàsic, intermedi i avançat.
   - Inclou el curs de les dades, la data de l'última actualització del dataset i l'enllaç a la font.
   - Si el curs del dataset no correspon al curs escolar actual, mostra un avís `⚠️`. El curs escolar es considera de l'1 de setembre al 31 d'agost.
-- Fila `Servei educatiu` amb el Servei Educatiu de Zona associat i botó `Web SE` quan la font en proporciona l'URL.
+- Fila `Servei educatiu` amb el Servei Educatiu de Zona associat, botó `Web SE` quan la font en proporciona l'URL i botó `Veure mapa`.
 - El camp `Nom districte municipal` només es mostra si té valor.
 - Mapes en modal:
   - ubicació del centre,
   - àrea territorial,
+  - servei educatiu,
   - comarca,
   - municipi.
 - Els popups no superen l'alçada de la finestra i mostren desplaçament vertical quan el contingut és llarg.
@@ -129,7 +130,13 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
 6. Municipis (ICGC Geoserveis)
    - Endpoint: `https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson`
 
-7. Cartografia base (Leaflet + OpenStreetMap tiles)
+7. Districtes de Barcelona (Open Data BCN)
+   - Dataset: `https://opendata-ajuntament.barcelona.cat/data/ca/dataset/20170706-districtes-barris`
+   - Recurs usat: `BarcelonaCiutat_Districtes.json`
+   - Endpoint: `https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download`
+   - S'usa per pintar només el districte en els Serveis Educatius de Zona de Barcelona ciutat.
+
+8. Cartografia base (Leaflet + OpenStreetMap tiles)
    - Leaflet CDN: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js`
    - Tiles OSM: `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`
 
@@ -166,18 +173,25 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
 - Pàgina oficial de reutilització ICGC: `https://www.icgc.cat/ca/LICGC/Informacio-publica/Transparencia/Reutilitzacio-de-la-informacio`
 - Segons aquesta pàgina, la llicència general de la geoinformació ICGC és **CC BY 4.0** (amb obligació de citació de la font).
 
-### 6) OpenStreetMap (cartografia base)
+### 6) Open Data BCN (districtes de Barcelona)
+
+- Origen: Ajuntament de Barcelona, portal Open Data BCN.
+- Dataset: `https://opendata-ajuntament.barcelona.cat/data/ca/dataset/20170706-districtes-barris`
+- Recurs: `BarcelonaCiutat_Districtes.json`.
+- Cal revisar la fitxa del dataset per confirmar les condicions de reutilització vigents.
+
+### 7) OpenStreetMap (cartografia base)
 
 - Llicència de les dades: **Open Data Commons Open Database License (ODbL)**.
 - Pàgina oficial: `https://www.openstreetmap.org/copyright`
 - Cal mantenir atribució a OpenStreetMap contributors.
 
-### 7) Leaflet
+### 8) Leaflet
 
 - Llicència: **BSD 2-Clause**.
 - Fitxer oficial de llicència: `https://github.com/Leaflet/Leaflet/blob/main/LICENSE`
 
-### 8) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
+### 9) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
 
 - Origen: repositori `rbarrachina/recollida_excedent`.
 - El repositori inclou llicència **CC BY-SA 4.0** (fitxer `LICENSE`).

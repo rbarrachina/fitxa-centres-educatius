@@ -14,6 +14,7 @@
   --button-soft-bg: #edf7ef;
   --button-soft-border: #bfdcc7;
   --button-soft-text: #245f3c;
+  --action-button-height: 28px;
   --danger: #b44a4a;
   --border: #cfe2d4;
   --shadow: rgba(24, 48, 38, 0.1);
@@ -379,8 +380,14 @@ tr:hover th {
 }
 
 .copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--action-button-height);
   padding: 4px 10px;
   font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
   border-radius: 6px;
   background: var(--button-soft-bg);
   color: var(--button-soft-text);
@@ -409,34 +416,47 @@ tr:hover th {
   flex-wrap: wrap;
 }
 
-.coord-with-map button {
-  min-height: 28px;
+.coord-with-map :is(button, .call-btn) {
+  min-height: var(--action-button-height);
 }
 
-.coord-with-map button:first-of-type:nth-last-of-type(2) {
+.coord-with-map > span + :is(button, .call-btn) {
+  background: var(--accent);
+  color: #fff;
+  border: 1px solid transparent;
+  box-shadow: none;
+}
+
+.coord-with-map > span + :is(button, .call-btn):hover {
+  background: var(--accent-dark);
+}
+
+.coord-with-map > span + :is(button, .call-btn) + :is(button, .call-btn) {
   background: var(--button-soft-bg);
   color: var(--button-soft-text);
   border: 1px solid var(--button-soft-border);
   box-shadow: none;
 }
 
-.coord-with-map button:first-of-type:nth-last-of-type(2):hover {
+.coord-with-map > span + :is(button, .call-btn) + :is(button, .call-btn):hover {
   background: #dcefe2;
 }
 
-.coord-with-map button + button {
+.coord-with-map :is(button, .call-btn) + :is(button, .call-btn) {
   margin-left: -2px;
 }
 
+.codes-btn,
 .map-btn,
 .territorial-map-btn,
 .comarca-map-btn,
 .municipi-map-btn,
+.educational-service-map-btn,
 .enrollment-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  min-height: 28px;
+  min-height: var(--action-button-height);
   padding: 4px 10px;
   font-size: 0.82rem;
   line-height: 1;
@@ -448,9 +468,11 @@ tr:hover th {
   box-shadow: none;
 }
 
+.codes-btn:hover,
 .territorial-map-btn:hover,
 .comarca-map-btn:hover,
 .municipi-map-btn:hover,
+.educational-service-map-btn:hover,
 .enrollment-btn:hover {
   background: var(--accent-dark);
 }
@@ -459,8 +481,11 @@ tr:hover th {
   display: inline-flex;
   align-items: center;
   justify-content: center;
+  min-height: var(--action-button-height);
   padding: 4px 10px;
   font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
   border-radius: 6px;
   background: var(--accent);
   color: #fff;
@@ -486,8 +511,14 @@ tr:hover th {
 }
 
 .phone-copy-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--action-button-height);
   padding: 4px 10px;
   font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
   border-radius: 6px;
   background: var(--button-soft-bg);
   color: var(--button-soft-text);
@@ -500,8 +531,14 @@ tr:hover th {
 }
 
 .web-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--action-button-height);
   padding: 4px 10px;
   font-size: 0.82rem;
+  line-height: 1;
+  white-space: nowrap;
   border-radius: 6px;
   background: var(--accent);
   color: #fff;
@@ -627,8 +664,14 @@ tr:last-child th {
 }
 
 .match-view-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: var(--action-button-height);
   padding: 4px 10px;
   font-size: 0.84rem;
+  line-height: 1;
+  white-space: nowrap;
   border-radius: 6px;
   flex: 0 0 auto;
   background: var(--accent);

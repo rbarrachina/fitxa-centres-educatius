@@ -32,9 +32,12 @@
     "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson";
   const MUNICIPIS_URL =
     "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson";
+  const BARCELONA_DISTRICTS_URL =
+    "https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download";
   let currentCoursePromise: Promise<string> | null = null;
   let currentCourseRowsPromise: Promise<SocrataRow[]> | null = null;
   let educationalServicesPromise: Promise<EducationalService[]> | null = null;
+  let barcelonaDistrictsFeaturesPromise: Promise<SocrataRow[]> | null = null;
   const KEY_LABELS: Record<string, string> = {
     any: "Any",
     curs: "Curs",
@@ -671,6 +674,42 @@
     };
   }
 
+  function parseUtmCoordinatePair(pair: string): [number, number] | null {
+    const [xValue, yValue] = pair.trim().split(/\s+/).map(Number);
+    if (!Number.isFinite(xValue) || !Number.isFinite(yValue)) return null;
+    const converted = utmToLatLon(31, xValue, yValue, true);
+    return [converted.lon, converted.lat];
+  }
+
+  function parseWktPolygonRings(value: string): number[][][] {
+    const body = value.trim().replace(/^POLYGON\s*\(\(/i, "").replace(/\)\)\s*$/i, "");
+    if (!body) return [];
+    return body.split(/\)\s*,\s*\(/).map((ring) =>
+      ring
+        .split(",")
+        .map(parseUtmCoordinatePair)
+        .filter((point): point is [number, number] => Boolean(point))
+    );
+  }
+
+  function wktToGeoJsonGeometry(value: string): any | null {
+    const trimmed = value.trim();
+    if (/^POLYGON\s*\(\(/i.test(trimmed)) {
+      return {
+        type: "Polygon",
+        coordinates: parseWktPolygonRings(trimmed),
+      };
+    }
+    if (/^MULTIPOLYGON\s*\(\(\(/i.test(trimmed)) {
+      const body = trimmed.replace(/^MULTIPOLYGON\s*\(\(\(/i, "").replace(/\)\)\)\s*$/i, "");
+      return {
+        type: "MultiPolygon",
+        coordinates: body.split(/\)\)\s*,\s*\(\(/).map(parseWktPolygonRings),
+      };
+    }
+    return null;
+  }
+
   const init = (): void => {
       const codeInput = byId<HTMLInputElement>("code");
       const loadButton = byId<HTMLButtonElement>("load");
@@ -700,6 +739,10 @@
       const closeMunicipiMapModalButton = byId<HTMLButtonElement>("closeMunicipiMapModal");
       const municipiNameLabel = byId<HTMLSpanElement>("municipiNameLabel");
       const municipiMapContainer = byId<HTMLDivElement>("municipiMap");
+      const educationalServiceMapModalBackdrop = byId<HTMLDivElement>("educationalServiceMapModalBackdrop");
+      const closeEducationalServiceMapModalButton = byId<HTMLButtonElement>("closeEducationalServiceMapModal");
+      const educationalServiceNameLabel = byId<HTMLSpanElement>("educationalServiceNameLabel");
+      const educationalServiceMapContainer = byId<HTMLDivElement>("educationalServiceMap");
       const codesModalBackdrop = byId<HTMLDivElement>("codesModalBackdrop");
       const closeCodesModalButton = byId<HTMLButtonElement>("closeCodesModal");
       const codesModalBody = byId<HTMLTableSectionElement>("codesModalBody");
@@ -712,11 +755,14 @@
       const territorialMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
       const comarcaMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
       const municipiMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
+      const educationalServiceMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
       let territorialFeaturesPromise: Promise<SocrataRow[]> | null = null;
       let comarquesFeaturesPromise: Promise<SocrataRow[]> | null = null;
       let municipisFeaturesPromise: Promise<SocrataRow[]> | null = null;
       let currentCentreForTerritorial: { name: string; x: string; y: string } | null = null;
       let currentMunicipalityForMap = "";
+      let currentDistrictForMap = "";
+      let currentEducationalServiceForMap: EducationalService | null = null;
       let currentCentreCode = "";
 
       const setMessage = (text: string, isError = false): void => {
@@ -737,7 +783,7 @@
         const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
         const escaped = escapeHtml(safeValue);
         if (isEmailField) {
-          return `<div class="value-with-copy"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" data-copy-message="Correu copiat al porta-retalls." type="button">Copiar</button></div>`;
+          return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" data-copy-message="Correu copiat al porta-retalls." type="button">Copiar</button></div>`;
         }
         if (phoneNumber) {
           const safePhone = escapeHtml(phoneNumber);
@@ -795,11 +841,19 @@
       const buildEducationalServiceRow = (service: EducationalService | null): string => {
         const name = service?.name || "-";
         const safeName = escapeHtml(name);
+        const centreName = escapeHtml(currentCentreForTerritorial?.name || "");
+        const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
+        const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
+        const mapButton = service
+          ? `<button class="educational-service-map-btn" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button>`
+          : "";
         const webUrl = normalizeWebUrl(service?.web || "");
-        if (!webUrl) return row("Servei educatiu", name);
+        if (!webUrl) {
+          return `<tr><th>Servei educatiu</th><td><div class="coord-with-map"><span>${safeName}</span>${mapButton}</div></td></tr>`;
+        }
         const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
         const safeOpenUrl = escapeHtml(normalizedUrl);
-        return `<tr><th>Servei educatiu</th><td><div class="coord-with-map"><span>${safeName}</span><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web SE</button></div></td></tr>`;
+        return `<tr><th>Servei educatiu</th><td><div class="coord-with-map educational-service-actions"><span>${safeName}</span>${mapButton}<button class="web-btn web-se-btn" data-open-url="${safeOpenUrl}" type="button">Web SE</button></div></td></tr>`;
       };
 
       const closeMapModal = (): void => {
@@ -820,6 +874,9 @@
       };
       const closeMunicipiMapModal = (): void => {
         municipiMapModalBackdrop.classList.add("hidden");
+      };
+      const closeEducationalServiceMapModal = (): void => {
+        educationalServiceMapModalBackdrop.classList.add("hidden");
       };
       const closeCodesModal = (): void => {
         codesModalBackdrop.classList.add("hidden");
@@ -962,6 +1019,33 @@
           .catch(() => []);
         return municipisFeaturesPromise;
       };
+      const loadBarcelonaDistrictFeatures = async (): Promise<SocrataRow[]> => {
+        if (barcelonaDistrictsFeaturesPromise) return barcelonaDistrictsFeaturesPromise;
+        barcelonaDistrictsFeaturesPromise = fetch(BARCELONA_DISTRICTS_URL)
+          .then((response) => {
+            if (!response.ok) throw new Error("No s'ha pogut carregar el mapa de districtes de Barcelona.");
+            return response.json();
+          })
+          .then((rows) => {
+            if (!Array.isArray(rows)) return [];
+            return rows
+              .map((row) => {
+                const geometry = wktToGeoJsonGeometry(asText(row?.geometria_etrs89));
+                if (!geometry) return null;
+                return {
+                  type: "Feature",
+                  properties: {
+                    name: asText(row?.nom_districte),
+                    code: asText(row?.Codi_Districte),
+                  },
+                  geometry,
+                };
+              })
+              .filter(Boolean) as SocrataRow[];
+          })
+          .catch(() => []);
+        return barcelonaDistrictsFeaturesPromise;
+      };
       const findMunicipiFeature = (municipiName: string, features: SocrataRow[]): SocrataRow | null => {
         const target = normalizeMunicipiName(municipiName);
         if (!target) return null;
@@ -978,6 +1062,27 @@
           if (containsWholeTerm(featureName, target)) return feature;
         }
         return null;
+      };
+      const getMunicipiFeatureName = (feature: SocrataRow): string =>
+        asText((feature as any)?.properties?.nom_muni || (feature as any)?.properties?.NOM_MUNI);
+      const getBarcelonaDistrictFeatureName = (feature: SocrataRow): string =>
+        asText((feature as any)?.properties?.name || (feature as any)?.properties?.nom_districte);
+      const findBarcelonaDistrictFeature = (districtName: string, features: SocrataRow[]): SocrataRow | null => {
+        const target = normalizeDistrictName(districtName);
+        if (!target) return null;
+        return features.find((feature) => normalizeDistrictName(getBarcelonaDistrictFeatureName(feature)) === target) || null;
+      };
+
+      const findEducationalServiceMunicipiFeatures = (service: EducationalService, features: SocrataRow[]): SocrataRow[] => {
+        const selected = new Map<string, SocrataRow>();
+        (service.municipalities || []).forEach((municipality) => {
+          const target = normalizePlaceName(municipality);
+          if (!target) return;
+          const feature = features.find((item) => normalizePlaceName(getMunicipiFeatureName(item)) === target) || findMunicipiFeature(municipality, features);
+          if (!feature) return;
+          selected.set(normalizePlaceName(getMunicipiFeatureName(feature)), feature);
+        });
+        return Array.from(selected.values());
       };
 
       const getOrCreateLeafletMap = (state: PolygonMapState, container: HTMLDivElement, leaflet: any): any => {
@@ -1145,6 +1250,79 @@
           centreY
         );
 
+      const openEducationalServiceMapModal = async (
+        service: EducationalService,
+        centreMunicipality: string,
+        centreDistrict: string,
+        centreName: string,
+        centreX: string,
+        centreY: string
+      ): Promise<void> => {
+        const districtName = service.district || centreDistrict;
+        const useBarcelonaDistrict = normalizePlaceName(centreMunicipality) === "barcelona" && Boolean(districtName);
+        const municipalitiesCount = service.municipalities?.length || 0;
+        educationalServiceNameLabel.textContent = useBarcelonaDistrict
+          ? `${service.name} · ${districtName}`
+          : `${service.name}${municipalitiesCount ? ` · ${municipalitiesCount} municipis` : ""}`;
+        educationalServiceMapModalBackdrop.classList.remove("hidden");
+
+        const leaflet = (window as any).L;
+        if (!leaflet) {
+          setMessage("No s'ha pogut carregar el mapa del servei educatiu.", true);
+          return;
+        }
+
+        const map = getOrCreateLeafletMap(educationalServiceMapState, educationalServiceMapContainer, leaflet);
+        clearPolygonMapState(educationalServiceMapState);
+
+        let selectedFeatures: SocrataRow[];
+        if (useBarcelonaDistrict) {
+          const districtFeature = findBarcelonaDistrictFeature(districtName, await loadBarcelonaDistrictFeatures());
+          selectedFeatures = districtFeature ? [districtFeature] : [];
+        } else {
+          selectedFeatures = findEducationalServiceMunicipiFeatures(service, await loadMunicipisFeatures());
+        }
+        if (!selectedFeatures.length) {
+          setMessage("No s'han trobat els polígons del servei educatiu.", true);
+          return;
+        }
+
+        const highlightedArea = useBarcelonaDistrict ? normalizeDistrictName(districtName) : normalizePlaceName(centreMunicipality);
+        const polygonLayer = leaflet
+          .geoJSON(
+            {
+              type: "FeatureCollection",
+              features: selectedFeatures,
+            } as any,
+            {
+              style: (feature: any) => {
+                const featureName = useBarcelonaDistrict ? getBarcelonaDistrictFeatureName(feature) : getMunicipiFeatureName(feature);
+                const isCentreArea = (useBarcelonaDistrict ? normalizeDistrictName(featureName) : normalizePlaceName(featureName)) === highlightedArea;
+                return {
+                  color: "#a8141a",
+                  weight: isCentreArea ? 3 : 1.5,
+                  opacity: 0.9,
+                  fillColor: "#d8232a",
+                  fillOpacity: isCentreArea ? 0.34 : 0.22,
+                };
+              },
+              onEachFeature: (feature: any, layer: any) => {
+                const name = useBarcelonaDistrict ? getBarcelonaDistrictFeatureName(feature) : getMunicipiFeatureName(feature);
+                if (name) layer.bindTooltip(name, { sticky: true, opacity: 0.95 });
+              },
+            }
+          )
+          .addTo(map);
+
+        educationalServiceMapState.layer = polygonLayer;
+        educationalServiceMapState.centreLayer = addCentreMarker(leaflet, map, centreName, centreX, centreY);
+
+        window.setTimeout(() => {
+          map.invalidateSize();
+          map.fitBounds(polygonLayer.getBounds(), { padding: [20, 20] });
+        }, 0);
+      };
+
       const openMapModal = (xValue: string, yValue: string, centreName: string): void => {
         const x = Number(xValue);
         const y = Number(yValue);
@@ -1219,6 +1397,7 @@
           x: (data.coordinates && data.coordinates.x) || "",
           y: (data.coordinates && data.coordinates.y) || "",
         };
+        currentEducationalServiceForMap = data.educational_service || null;
 
         const pullFieldByLabel = (labels: string[]): string => {
           for (const label of labels) {
@@ -1341,6 +1520,7 @@
           "Nom districte municipal",
           "Nom districte",
         ]);
+        currentDistrictForMap = districtNameValue || "";
         const municipalityDisplay =
           municipalityValue && localityValue && normalizeText(municipalityValue) !== normalizeText(localityValue)
             ? `${municipalityValue} (${localityValue})`
@@ -1508,6 +1688,7 @@
       closeTerritorialMapModalButton.addEventListener("click", closeTerritorialMapModal);
       closeComarcaMapModalButton.addEventListener("click", closeComarcaMapModal);
       closeMunicipiMapModalButton.addEventListener("click", closeMunicipiMapModal);
+      closeEducationalServiceMapModalButton.addEventListener("click", closeEducationalServiceMapModal);
       closeCodesModalButton.addEventListener("click", closeCodesModal);
       closeEnrollmentModalButton.addEventListener("click", closeEnrollmentModal);
 
@@ -1526,6 +1707,9 @@
       municipiMapModalBackdrop.addEventListener("click", (event: MouseEvent) => {
         if (event.target === municipiMapModalBackdrop) closeMunicipiMapModal();
       });
+      educationalServiceMapModalBackdrop.addEventListener("click", (event: MouseEvent) => {
+        if (event.target === educationalServiceMapModalBackdrop) closeEducationalServiceMapModal();
+      });
       codesModalBackdrop.addEventListener("click", (event: MouseEvent) => {
         if (event.target === codesModalBackdrop) closeCodesModal();
       });
@@ -1539,6 +1723,7 @@
         if (event.key === "Escape" && !territorialMapModalBackdrop.classList.contains("hidden")) closeTerritorialMapModal();
         if (event.key === "Escape" && !comarcaMapModalBackdrop.classList.contains("hidden")) closeComarcaMapModal();
         if (event.key === "Escape" && !municipiMapModalBackdrop.classList.contains("hidden")) closeMunicipiMapModal();
+        if (event.key === "Escape" && !educationalServiceMapModalBackdrop.classList.contains("hidden")) closeEducationalServiceMapModal();
         if (event.key === "Escape" && !codesModalBackdrop.classList.contains("hidden")) closeCodesModal();
         if (event.key === "Escape" && !enrollmentModalBackdrop.classList.contains("hidden")) closeEnrollmentModal();
       });
@@ -1616,6 +1801,20 @@
             municipiMapButton.dataset.centreName || "",
             municipiMapButton.dataset.centreX || "",
             municipiMapButton.dataset.centreY || ""
+          );
+          return;
+        }
+
+        const educationalServiceMapButton = target.closest(".educational-service-map-btn") as HTMLButtonElement | null;
+        if (educationalServiceMapButton) {
+          if (!currentEducationalServiceForMap) return;
+          openEducationalServiceMapModal(
+            currentEducationalServiceForMap,
+            currentMunicipalityForMap,
+            currentDistrictForMap,
+            educationalServiceMapButton.dataset.centreName || "",
+            educationalServiceMapButton.dataset.centreX || "",
+            educationalServiceMapButton.dataset.centreY || ""
           );
           return;
         }
