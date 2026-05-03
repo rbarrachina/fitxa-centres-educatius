@@ -10,7 +10,7 @@
     integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
     crossorigin=""
   />
-  <link rel="stylesheet" href="./css/fitxa-centre.css?v=20260427-matricula" />
+  <link rel="stylesheet" href="./css/fitxa-centre.css?v=20260503-docent-warning" />
 </head>
 <body>
   <main class="container">
@@ -149,6 +149,40 @@
       </div>
     </div>
 
+    <div id="teachingStaffSpecialtiesModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="teachingStaffSpecialtiesModalTitle">
+      <div class="modal teaching-staff-specialties-modal">
+        <div class="modal-header">
+          <span id="teachingStaffSpecialtiesModalTitle">Especialitats del personal docent</span>
+          <button id="closeTeachingStaffSpecialtiesModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <p id="teachingStaffSpecialtiesDescription" class="enrollment-description"></p>
+          <table class="teaching-staff-specialties-table">
+            <thead>
+              <tr>
+                <th>Especialitat</th>
+                <th>Dotació</th>
+                <th>Ocupació definitiva</th>
+              </tr>
+            </thead>
+            <tbody id="teachingStaffSpecialtiesModalBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <div id="staffDataWarningModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="staffDataWarningModalTitle">
+      <div class="modal staff-data-warning-modal">
+        <div class="modal-header">
+          <span id="staffDataWarningModalTitle">Avís sobre la dada</span>
+          <button id="closeStaffDataWarningModal" type="button">Tancar</button>
+        </div>
+        <div class="modal-body">
+          <p id="staffDataWarningText"></p>
+        </div>
+      </div>
+    </div>
+
     <div id="infoModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
       <div class="modal info-modal">
         <div class="modal-header">
@@ -226,6 +260,6 @@
     integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
     crossorigin=""
   ></script>
-  <script src="./js/fitxa-centre.js?v=20260427-matricula"></script>
+  <script src="./js/fitxa-centre.js?v=20260503-docent-warning"></script>
 </body>
 </html>

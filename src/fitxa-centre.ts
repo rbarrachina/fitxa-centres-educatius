@@ -26,6 +26,12 @@
   const MATRICULA_METADATA_URL = "https://analisi.transparenciacatalunya.cat/api/views/xvme-26kg";
   const MATRICULA_SOURCE_URL =
     "https://analisi.transparenciacatalunya.cat/Educaci-/Alumnes-matriculats-per-ensenyament-i-unitats-dels/xvme-26kg/about_data";
+  const TEACHING_STAFF_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/2ip7-jdgh.json";
+  const TEACHING_STAFF_SOURCE_URL =
+    "https://analisi.transparenciacatalunya.cat/Educaci-/Personal-docent-en-centres-p-blics-titularitat-del/2ip7-jdgh/about_data";
+  const TEACHING_STAFF_SPECIALTIES_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/4fid-p2hv.json";
+  const TEACHING_STAFF_SPECIALTIES_SOURCE_URL =
+    "https://analisi.transparenciacatalunya.cat/Educaci-/Plantilles-del-personal-docent-dels-centres-p-blic/4fid-p2hv";
   const EDUCATIONAL_SERVICES_URL = "data/serveis-educatius.json";
   const TERRITORIAL_SERVICES_URL = "data/serveis-territorials-simplificat.geojson";
   const COMARQUES_URL =
@@ -36,6 +42,8 @@
     "https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download";
   let currentCoursePromise: Promise<string> | null = null;
   let currentCourseRowsPromise: Promise<SocrataRow[]> | null = null;
+  let teachingStaffCoursePromise: Promise<string> | null = null;
+  let teachingStaffSpecialtiesCoursePromise: Promise<string> | null = null;
   let educationalServicesPromise: Promise<EducationalService[]> | null = null;
   let barcelonaDistrictsFeaturesPromise: Promise<SocrataRow[]> | null = null;
   const KEY_LABELS: Record<string, string> = {
@@ -246,6 +254,29 @@
   function toInt(value: unknown): number {
     const parsed = Number(asText(value));
     return Number.isFinite(parsed) ? parsed : 0;
+  }
+
+  function formatNumber(value: unknown): string {
+    const parsed = Number(asText(value));
+    if (!Number.isFinite(parsed)) return "-";
+    return parsed.toLocaleString("ca-ES");
+  }
+
+  function hasPossibleMissingDecimal(value: unknown): boolean {
+    const parsed = Number(asText(value));
+    return Number.isInteger(parsed) && Math.abs(parsed) % 10 === 5;
+  }
+
+  function isExactFive(value: unknown): boolean {
+    return Number(asText(value)) === 5;
+  }
+
+  function formatPossibleMissingDecimal(value: unknown): string {
+    const raw = asText(value).trim();
+    const parsed = Number(raw);
+    if (!Number.isFinite(parsed)) return "";
+    if (parsed === 625) return (parsed / 1000).toLocaleString("ca-ES", { maximumFractionDigits: 3 });
+    return (parsed / 10).toLocaleString("ca-ES", { maximumFractionDigits: 2 });
   }
 
   function formatDateFromUnix(value: unknown): string {
@@ -528,6 +559,99 @@
     };
   }
 
+  async function getTeachingStaffCourse(): Promise<string> {
+    if (teachingStaffCoursePromise) return teachingStaffCoursePromise;
+    teachingStaffCoursePromise = (async () => {
+      const query = "SELECT max(curs) as current_curs WHERE curs is not null";
+      const response = await fetch(`${TEACHING_STAFF_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+      const raw = await response.text();
+      let rows: any = null;
+      try {
+        rows = JSON.parse(raw);
+      } catch {
+        throw new Error("No s'ha pogut determinar l'últim curs de personal docent.");
+      }
+      if (!response.ok || !Array.isArray(rows) || !rows.length) {
+        throw new Error("No s'ha pogut determinar l'últim curs de personal docent.");
+      }
+      const current = asText(rows[0]?.current_curs);
+      if (!current) {
+        throw new Error("No s'ha pogut determinar l'últim curs de personal docent.");
+      }
+      return current;
+    })();
+    return teachingStaffCoursePromise;
+  }
+
+  async function fetchTeachingStaffTotal(code: string): Promise<string> {
+    try {
+      const course = await getTeachingStaffCourse();
+      const query = `SELECT total WHERE curs = '${escapeSoql(course)}' AND codi_centre = '${escapeSoql(code)}' LIMIT 1`;
+      const response = await fetch(`${TEACHING_STAFF_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+      const raw = await response.text();
+      let rows: any = null;
+      try {
+        rows = JSON.parse(raw);
+      } catch {
+        return "Sense dades";
+      }
+      if (!response.ok || !Array.isArray(rows) || !rows.length) return "Sense dades";
+      const total = Number(asText(rows[0]?.total));
+      if (!Number.isFinite(total)) return "Sense dades";
+      return `${total.toLocaleString("ca-ES")} docents`;
+    } catch {
+      return "Sense dades";
+    }
+  }
+
+  async function getTeachingStaffSpecialtiesCourse(): Promise<string> {
+    if (teachingStaffSpecialtiesCoursePromise) return teachingStaffSpecialtiesCoursePromise;
+    teachingStaffSpecialtiesCoursePromise = (async () => {
+      const query = "SELECT max(curs) as current_curs WHERE curs is not null";
+      const response = await fetch(`${TEACHING_STAFF_SPECIALTIES_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+      const raw = await response.text();
+      let rows: any = null;
+      try {
+        rows = JSON.parse(raw);
+      } catch {
+        throw new Error("No s'ha pogut determinar l'últim curs de plantilles docents.");
+      }
+      if (!response.ok || !Array.isArray(rows) || !rows.length) {
+        throw new Error("No s'ha pogut determinar l'últim curs de plantilles docents.");
+      }
+      const current = asText(rows[0]?.current_curs);
+      if (!current) {
+        throw new Error("No s'ha pogut determinar l'últim curs de plantilles docents.");
+      }
+      return current;
+    })();
+    return teachingStaffSpecialtiesCoursePromise;
+  }
+
+  async function fetchTeachingStaffSpecialties(code: string): Promise<{ course: string; rows: SocrataRow[]; sourceUrl: string }> {
+    const course = await getTeachingStaffSpecialtiesCourse();
+    const query =
+      "SELECT codi_lloc_desc, total_dot, ocu_def " +
+      `WHERE curs = '${escapeSoql(course)}' AND codi_centre = '${escapeSoql(code)}' ` +
+      "ORDER BY codi_lloc_desc LIMIT 5000";
+    const response = await fetch(`${TEACHING_STAFF_SPECIALTIES_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
+    const raw = await response.text();
+    let rows: any = null;
+    try {
+      rows = JSON.parse(raw);
+    } catch {
+      throw new Error("No s'han pogut llegir les especialitats del personal docent.");
+    }
+    if (!response.ok) {
+      throw new Error(rows?.message || "No s'han pogut consultar les especialitats del personal docent.");
+    }
+    return {
+      course,
+      rows: Array.isArray(rows) ? rows as SocrataRow[] : [],
+      sourceUrl: TEACHING_STAFF_SPECIALTIES_SOURCE_URL,
+    };
+  }
+
   async function fetchEducationalServices(): Promise<EducationalService[]> {
     if (educationalServicesPromise) return educationalServicesPromise;
     educationalServicesPromise = (async () => {
@@ -750,6 +874,13 @@
       const closeEnrollmentModalButton = byId<HTMLButtonElement>("closeEnrollmentModal");
       const enrollmentDescription = byId<HTMLParagraphElement>("enrollmentDescription");
       const enrollmentModalBody = byId<HTMLTableSectionElement>("enrollmentModalBody");
+      const teachingStaffSpecialtiesModalBackdrop = byId<HTMLDivElement>("teachingStaffSpecialtiesModalBackdrop");
+      const closeTeachingStaffSpecialtiesModalButton = byId<HTMLButtonElement>("closeTeachingStaffSpecialtiesModal");
+      const teachingStaffSpecialtiesDescription = byId<HTMLParagraphElement>("teachingStaffSpecialtiesDescription");
+      const teachingStaffSpecialtiesModalBody = byId<HTMLTableSectionElement>("teachingStaffSpecialtiesModalBody");
+      const staffDataWarningModalBackdrop = byId<HTMLDivElement>("staffDataWarningModalBackdrop");
+      const closeStaffDataWarningModalButton = byId<HTMLButtonElement>("closeStaffDataWarningModal");
+      const staffDataWarningText = byId<HTMLParagraphElement>("staffDataWarningText");
       let centreMap: any = null;
       let centreMapLayer: any = null;
       const territorialMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
@@ -838,6 +969,13 @@
         const safeStudies = escapeHtml(studiesValue || "-");
         return `<tr><th>Estudis</th><td><div class="coord-with-map"><span>${safeStudies}</span><button class="enrollment-btn" type="button">Veure matrícula</button></div></td></tr>`;
       };
+      const buildTeachingStaffRow = (teachingStaffValue: string): string => {
+        const safeValue = escapeHtml(teachingStaffValue || "Sense dades");
+        const button = teachingStaffValue && teachingStaffValue !== "Sense dades"
+          ? '<button class="teaching-staff-specialties-btn" type="button">Veure espacialitats</button>'
+          : "";
+        return `<tr><th>Personal docent</th><td><div class="coord-with-map"><span>${safeValue}</span>${button}</div></td></tr>`;
+      };
       const buildEducationalServiceRow = (service: EducationalService | null): string => {
         const name = service?.name || "-";
         const safeName = escapeHtml(name);
@@ -887,6 +1025,18 @@
       const closeEnrollmentModal = (): void => {
         enrollmentModalBackdrop.classList.add("hidden");
       };
+      const closeTeachingStaffSpecialtiesModal = (): void => {
+        teachingStaffSpecialtiesModalBackdrop.classList.add("hidden");
+      };
+      const closeStaffDataWarningModal = (): void => {
+        staffDataWarningModalBackdrop.classList.add("hidden");
+      };
+      const openStaffDataWarningModal = (value: string, possibleValue: string): void => {
+        staffDataWarningText.textContent =
+          `És possible que aquesta dada no sigui correcta perquè pot faltar el decimal al dataset original. ` +
+          `El valor de ${value} podria correspondre a ${possibleValue}.`;
+        staffDataWarningModalBackdrop.classList.remove("hidden");
+      };
       const openEnrollmentModal = async (): Promise<void> => {
         if (!currentCentreCode) return;
         enrollmentDescription.textContent = "Carregant matrícula...";
@@ -921,6 +1071,46 @@
         } catch (error: any) {
           enrollmentDescription.textContent = `Error de connexió: ${error.message}`;
           enrollmentModalBody.innerHTML = "";
+        }
+      };
+
+      const openTeachingStaffSpecialtiesModal = async (): Promise<void> => {
+        if (!currentCentreCode) return;
+        teachingStaffSpecialtiesDescription.textContent = "Carregant especialitats...";
+        teachingStaffSpecialtiesModalBody.innerHTML = "";
+        teachingStaffSpecialtiesModalBackdrop.classList.remove("hidden");
+
+        try {
+          const specialties = await fetchTeachingStaffSpecialties(currentCentreCode);
+          teachingStaffSpecialtiesDescription.innerHTML =
+            `Dades del curs ${escapeHtml(specialties.course)}. ` +
+            `<a href="${escapeHtml(specialties.sourceUrl)}" target="_blank" rel="noopener noreferrer">Font</a>`;
+
+          if (!specialties.rows.length) {
+            teachingStaffSpecialtiesModalBody.innerHTML = '<tr><td colspan="3">No hi ha dades d\'especialitats per a aquest centre.</td></tr>';
+            return;
+          }
+
+          const renderSpecialtyNumber = (value: unknown, warnExactFive: boolean): string => {
+            const formatted = formatNumber(value);
+            const showWarning = hasPossibleMissingDecimal(value) && (!isExactFive(value) || warnExactFive);
+            const warningButton = showWarning
+              ? `<button class="staff-data-warning-btn" type="button" data-warning-value="${escapeHtml(formatted)}" data-warning-possible-value="${escapeHtml(formatPossibleMissingDecimal(value))}" aria-label="Avís: possible decimal absent" title="Possible decimal absent">⚠️</button>`
+              : "";
+            return `<span class="specialty-number-cell"><span>${escapeHtml(formatted)}</span>${warningButton}</span>`;
+          };
+
+          teachingStaffSpecialtiesModalBody.innerHTML = specialties.rows
+            .map((item) => {
+              const warnExactFive = isExactFive(item.total_dot) && isExactFive(item.ocu_def);
+              return `<tr><td>${escapeHtml(asText(item.codi_lloc_desc) || "-")}</td>` +
+                `<td>${renderSpecialtyNumber(item.total_dot, warnExactFive)}</td>` +
+                `<td>${renderSpecialtyNumber(item.ocu_def, warnExactFive)}</td></tr>`;
+            })
+            .join("");
+        } catch (error: any) {
+          teachingStaffSpecialtiesDescription.textContent = `Error de connexió: ${error.message}`;
+          teachingStaffSpecialtiesModalBody.innerHTML = "";
         }
       };
 
@@ -1387,11 +1577,12 @@
         }, 0);
       };
 
-      const renderData = (data: any): void => {
+      const renderData = async (data: any): Promise<void> => {
         const fields = { ...(data.fields || {}) };
         const rows: string[] = [];
         const studies: string[] = [];
         currentCentreCode = String((data.centre && data.centre.code) || data.requested_code || "").trim();
+        const teachingStaffTotal = currentCentreCode ? await fetchTeachingStaffTotal(currentCentreCode) : "Sense dades";
         currentCentreForTerritorial = {
           name: (data.centre && data.centre.name) || "",
           x: (data.coordinates && data.coordinates.x) || "",
@@ -1543,6 +1734,7 @@
         rows.push(row("Comarca", comarcaValue || "-"));
         rows.push(row("Curs", cursValue || "-"));
         rows.push(buildEnrollmentButtonRow(studies.length ? studies.join(" - ") : "-"));
+        rows.push(buildTeachingStaffRow(teachingStaffTotal));
         rows.push(buildCodesButtonRow());
 
         codesModalBody.innerHTML = codes
@@ -1634,7 +1826,7 @@
                 setMessage(data.message || "No s'ha pogut carregar el centre.", true);
                 return;
               }
-              renderData(data);
+              await renderData(data);
               setMessage("");
               return;
             }
@@ -1649,7 +1841,7 @@
               const selected = matches[0];
               const code = asText(selected.codi_centre);
               const data = await attachEducationalService(rowToFitxaData(code, selected), selected);
-              renderData(data);
+              await renderData(data);
               setMessage("");
               return;
             }
@@ -1672,7 +1864,7 @@
             setMessage(data.message || "No s'ha pogut carregar el centre.", true);
             return;
           }
-          renderData(data);
+          await renderData(data);
           setMessage("");
         } catch (error: any) {
           setMessage(`Error de connexió: ${error.message}`, true);
@@ -1691,6 +1883,8 @@
       closeEducationalServiceMapModalButton.addEventListener("click", closeEducationalServiceMapModal);
       closeCodesModalButton.addEventListener("click", closeCodesModal);
       closeEnrollmentModalButton.addEventListener("click", closeEnrollmentModal);
+      closeTeachingStaffSpecialtiesModalButton.addEventListener("click", closeTeachingStaffSpecialtiesModal);
+      closeStaffDataWarningModalButton.addEventListener("click", closeStaffDataWarningModal);
 
       infoModalBackdrop.addEventListener("click", (event: MouseEvent) => {
         if (event.target === infoModalBackdrop) closeInfoModal();
@@ -1716,6 +1910,12 @@
       enrollmentModalBackdrop.addEventListener("click", (event: MouseEvent) => {
         if (event.target === enrollmentModalBackdrop) closeEnrollmentModal();
       });
+      teachingStaffSpecialtiesModalBackdrop.addEventListener("click", (event: MouseEvent) => {
+        if (event.target === teachingStaffSpecialtiesModalBackdrop) closeTeachingStaffSpecialtiesModal();
+      });
+      staffDataWarningModalBackdrop.addEventListener("click", (event: MouseEvent) => {
+        if (event.target === staffDataWarningModalBackdrop) closeStaffDataWarningModal();
+      });
 
       document.addEventListener("keydown", (event: KeyboardEvent) => {
         if (event.key === "Escape" && !infoModalBackdrop.classList.contains("hidden")) closeInfoModal();
@@ -1726,6 +1926,16 @@
         if (event.key === "Escape" && !educationalServiceMapModalBackdrop.classList.contains("hidden")) closeEducationalServiceMapModal();
         if (event.key === "Escape" && !codesModalBackdrop.classList.contains("hidden")) closeCodesModal();
         if (event.key === "Escape" && !enrollmentModalBackdrop.classList.contains("hidden")) closeEnrollmentModal();
+        if (event.key === "Escape" && !teachingStaffSpecialtiesModalBackdrop.classList.contains("hidden")) closeTeachingStaffSpecialtiesModal();
+        if (event.key === "Escape" && !staffDataWarningModalBackdrop.classList.contains("hidden")) closeStaffDataWarningModal();
+      });
+
+      teachingStaffSpecialtiesModalBody.addEventListener("click", (event: Event) => {
+        const target = event.target as HTMLElement;
+        const warningButton = target.closest(".staff-data-warning-btn") as HTMLButtonElement | null;
+        if (warningButton) {
+          openStaffDataWarningModal(warningButton.dataset.warningValue || "", warningButton.dataset.warningPossibleValue || "");
+        }
       });
 
       resultBody.addEventListener("click", async (event: Event) => {
@@ -1739,6 +1949,12 @@
         const enrollmentButton = target.closest(".enrollment-btn") as HTMLButtonElement | null;
         if (enrollmentButton) {
           await openEnrollmentModal();
+          return;
+        }
+
+        const teachingStaffSpecialtiesButton = target.closest(".teaching-staff-specialties-btn") as HTMLButtonElement | null;
+        if (teachingStaffSpecialtiesButton) {
+          await openTeachingStaffSpecialtiesModal();
           return;
         }
 
@@ -1859,7 +2075,7 @@
             setMessage("No s'ha pogut carregar el centre seleccionat.", true);
             return;
           }
-          renderData(data);
+          await renderData(data);
           setMessage("");
         } catch (error: any) {
           setMessage(`Error de connexió: ${error.message}`, true);

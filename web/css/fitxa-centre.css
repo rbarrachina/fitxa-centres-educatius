@@ -78,6 +78,14 @@ body {
   width: min(760px, 96vw);
 }
 
+.modal.teaching-staff-specialties-modal {
+  width: min(620px, 94vw);
+}
+
+.modal.staff-data-warning-modal {
+  width: min(440px, 92vw);
+}
+
 .info-modal-body {
   display: flex;
   flex-direction: column;
@@ -210,7 +218,16 @@ body {
   table-layout: fixed;
 }
 
+.teaching-staff-specialties-table {
+  box-shadow: none;
+  table-layout: fixed;
+}
+
 .enrollment-table th:first-child {
+  width: auto;
+}
+
+.teaching-staff-specialties-table th:first-child {
   width: auto;
 }
 
@@ -223,13 +240,29 @@ body {
   width: 86px;
 }
 
+.teaching-staff-specialties-table th:nth-child(2),
+.teaching-staff-specialties-table td:nth-child(2) {
+  width: 80px;
+  text-align: center;
+}
+
+.teaching-staff-specialties-table th:nth-child(3),
+.teaching-staff-specialties-table td:nth-child(3) {
+  width: 170px;
+  text-align: center;
+}
+
 .enrollment-table th,
-.enrollment-table td {
+.enrollment-table td,
+.teaching-staff-specialties-table th,
+.teaching-staff-specialties-table td {
   text-align: center;
 }
 
 .enrollment-table th:first-child,
-.enrollment-table td:first-child {
+.enrollment-table td:first-child,
+.teaching-staff-specialties-table th:first-child,
+.teaching-staff-specialties-table td:first-child {
   color: var(--accent-deep);
   text-align: left;
 }
@@ -239,8 +272,39 @@ body {
 .enrollment-table th:nth-child(3),
 .enrollment-table td:nth-child(3),
 .enrollment-table th:last-child,
-.enrollment-table td:last-child {
+.enrollment-table td:last-child,
+.teaching-staff-specialties-table th:nth-child(2),
+.teaching-staff-specialties-table td:nth-child(2),
+.teaching-staff-specialties-table th:last-child,
+.teaching-staff-specialties-table td:last-child {
   white-space: nowrap;
+}
+
+.specialty-number-cell {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+}
+
+.staff-data-warning-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  font-size: 0.84rem;
+  line-height: 1;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: #8a5a00;
+  box-shadow: none;
+}
+
+.staff-data-warning-btn:hover {
+  background: #fff4cc;
 }
 
 h1 {
@@ -452,6 +516,7 @@ tr:hover th {
 .comarca-map-btn,
 .municipi-map-btn,
 .educational-service-map-btn,
+.teaching-staff-specialties-btn,
 .enrollment-btn {
   display: inline-flex;
   align-items: center;
@@ -473,6 +538,7 @@ tr:hover th {
 .comarca-map-btn:hover,
 .municipi-map-btn:hover,
 .educational-service-map-btn:hover,
+.teaching-staff-specialties-btn:hover,
 .enrollment-btn:hover {
   background: var(--accent-dark);
 }

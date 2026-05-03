@@ -15,6 +15,8 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
   - En idiomes, ordena els nivells com a bàsic, intermedi i avançat.
   - Inclou el curs de les dades, la data de l'última actualització del dataset i l'enllaç a la font.
   - Si el curs del dataset no correspon al curs escolar actual, mostra un avís `⚠️`. El curs escolar es considera de l'1 de setembre al 31 d'agost.
+- Fila `Personal docent` amb el total de docents del centre en l'últim curs disponible; si no hi ha dades, mostra `Sense dades`.
+  - Quan hi ha dades, el botó `Veure espacialitats` obre un popup amb `Especialitat`, `Dotació` i `Ocupació definitiva`.
 - Fila `Servei educatiu` amb el Servei Educatiu de Zona associat, botó `Web SE` quan la font en proporciona l'URL i botó `Veure mapa`.
 - El camp `Nom districte municipal` només es mostra si té valor.
 - Mapes en modal:
@@ -113,30 +115,43 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
    - La consulta usa només l'últim `curs` disponible i agrupa per centre, ensenyament i `nivell`.
    - Mostra `matr_cules_total` com a matrícula i `unitats` com a grups.
 
-3. Àrees territorials (fitxer local al repositori)
+3. Personal docent en centres públics de titularitat del Departament d'Educació (Socrata)
+   - URL dataset: `https://analisi.transparenciacatalunya.cat/Educaci-/Personal-docent-en-centres-p-blics-titularitat-del/2ip7-jdgh/about_data`
+   - API usada: `https://analisi.transparenciacatalunya.cat/resource/2ip7-jdgh.json`
+   - La consulta usa només l'últim `curs` disponible i mostra el camp `total`.
+   - Si no hi ha registre per al centre consultat, mostra `Sense dades`.
+
+4. Plantilles del personal docent dels centres públics i serveis educatius (Socrata)
+   - URL dataset: `https://analisi.transparenciacatalunya.cat/Educaci-/Plantilles-del-personal-docent-dels-centres-p-blic/4fid-p2hv`
+   - API usada: `https://analisi.transparenciacatalunya.cat/resource/4fid-p2hv.json`
+   - La consulta usa només l'últim `curs` disponible i mostra `codi_lloc_desc`, `total_dot` i `ocu_def`.
+   - Només es consulta des del botó d'especialitats quan el centre té dades de personal docent.
+   - Els valors enters acabats en `5` es marquen amb un avís perquè poden correspondre a dades amb el decimal absent al dataset original; el valor exacte `5` només s'avisa quan `total_dot` i `ocu_def` són tots dos `5`, i el valor `625` es tracta com a possible `0,625`.
+
+5. Àrees territorials (fitxer local al repositori)
    - Fitxer: `web/data/serveis-territorials-simplificat.geojson`
    - Origen del recurs: `https://github.com/rbarrachina/recollida_excedent`
 
-4. Serveis Educatius de Zona (fitxer local al repositori)
+6. Serveis Educatius de Zona (fitxer local al repositori)
    - Fitxer: `web/data/serveis-educatius.json`
    - Origen del recurs: `https://edumet.cat/areatac/presentacions/index_json.php?config=ConfigTotsSEZ&id=1l_0DXbgPhhoaHEA_oCdz2rR_6ZeVF0ZPWagyuZkOeq0`
    - Full públic usat per generar-lo: `https://docs.google.com/spreadsheets/d/1l_0DXbgPhhoaHEA_oCdz2rR_6ZeVF0ZPWagyuZkOeq0/gviz/tq?tqx=out:csv&sheet=Serveis`
    - Regeneració: `npm run build:serveis-educatius`
    - La correspondència es fa per municipi; en el cas de Barcelona, per municipi i districte municipal.
 
-5. Comarques (ICGC Geoserveis)
+7. Comarques (ICGC Geoserveis)
    - Endpoint: `https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson`
 
-6. Municipis (ICGC Geoserveis)
+8. Municipis (ICGC Geoserveis)
    - Endpoint: `https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson`
 
-7. Districtes de Barcelona (Open Data BCN)
+9. Districtes de Barcelona (Open Data BCN)
    - Dataset: `https://opendata-ajuntament.barcelona.cat/data/ca/dataset/20170706-districtes-barris`
    - Recurs usat: `BarcelonaCiutat_Districtes.json`
    - Endpoint: `https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download`
    - S'usa per pintar només el districte en els Serveis Educatius de Zona de Barcelona ciutat.
 
-8. Cartografia base (Leaflet + OpenStreetMap tiles)
+10. Cartografia base (Leaflet + OpenStreetMap tiles)
    - Leaflet CDN: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js`
    - Tiles OSM: `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`
 
@@ -162,36 +177,48 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
 - Atribució indicada a metadata: `Departament d'Educació`.
 - Enllaç d'atribució/llicències: `https://administraciodigital.gencat.cat/ca/dades/dades-obertes/informacio-practica/llicencies/`
 
-### 4) Serveis Educatius de Zona
+### 4) Dataset de personal docent (`2ip7-jdgh`)
+
+- Metadata de l'API Socrata: `license.name = "See Terms of Use"`.
+- Atribució indicada a metadata: `Departament d'Educació`.
+- Enllaç d'atribució/llicències: `https://administraciodigital.gencat.cat/ca/dades/dades-obertes/informacio-practica/llicencies/`
+
+### 5) Dataset de plantilles docents (`4fid-p2hv`)
+
+- Metadata de l'API Socrata: `license.name = "See Terms of Use"`.
+- Atribució indicada a metadata: `Departament d'Educació`.
+- Enllaç d'atribució/llicències: `https://administraciodigital.gencat.cat/ca/dades/dades-obertes/informacio-practica/llicencies/`
+
+### 6) Serveis Educatius de Zona
 
 - Origen: mapa públic `Relació de Serveis Educatius`.
 - URL: `https://edumet.cat/areatac/presentacions/index_json.php?config=ConfigTotsSEZ&id=1l_0DXbgPhhoaHEA_oCdz2rR_6ZeVF0ZPWagyuZkOeq0`
 - Les condicions de reutilització depenen de la font original publicada.
 
-### 5) Geoinformació ICGC (serveis de comarca/municipi)
+### 7) Geoinformació ICGC (serveis de comarca/municipi)
 
 - Pàgina oficial de reutilització ICGC: `https://www.icgc.cat/ca/LICGC/Informacio-publica/Transparencia/Reutilitzacio-de-la-informacio`
 - Segons aquesta pàgina, la llicència general de la geoinformació ICGC és **CC BY 4.0** (amb obligació de citació de la font).
 
-### 6) Open Data BCN (districtes de Barcelona)
+### 8) Open Data BCN (districtes de Barcelona)
 
 - Origen: Ajuntament de Barcelona, portal Open Data BCN.
 - Dataset: `https://opendata-ajuntament.barcelona.cat/data/ca/dataset/20170706-districtes-barris`
 - Recurs: `BarcelonaCiutat_Districtes.json`.
 - Cal revisar la fitxa del dataset per confirmar les condicions de reutilització vigents.
 
-### 7) OpenStreetMap (cartografia base)
+### 9) OpenStreetMap (cartografia base)
 
 - Llicència de les dades: **Open Data Commons Open Database License (ODbL)**.
 - Pàgina oficial: `https://www.openstreetmap.org/copyright`
 - Cal mantenir atribució a OpenStreetMap contributors.
 
-### 8) Leaflet
+### 10) Leaflet
 
 - Llicència: **BSD 2-Clause**.
 - Fitxer oficial de llicència: `https://github.com/Leaflet/Leaflet/blob/main/LICENSE`
 
-### 9) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
+### 11) Fitxer territorial local (`serveis-territorials-simplificat.geojson`)
 
 - Origen: repositori `rbarrachina/recollida_excedent`.
 - El repositori inclou llicència **CC BY-SA 4.0** (fitxer `LICENSE`).
