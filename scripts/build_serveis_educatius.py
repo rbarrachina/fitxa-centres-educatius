@@ -18,6 +18,15 @@ MAP_URL = (
 )
 OUTPUT_PATH = pathlib.Path("web/data/serveis-educatius.json")
 
+MUNICIPALITY_CORRECTIONS = {
+    "LLE08": {
+        "remove": ["Aguilar de Segarra"],
+    },
+    "CCE02": {
+        "add": ["Aguilar de Segarra"],
+    },
+}
+
 
 def clean(value):
     return str(value or "").strip()
@@ -30,6 +39,18 @@ def split_municipalities(value):
 
     parts = raw.splitlines()
     return [part.strip() for part in parts if part.strip()]
+
+
+def apply_municipality_corrections(code, municipalities):
+    correction = MUNICIPALITY_CORRECTIONS.get(code, {})
+    remove = set(correction.get("remove", []))
+    corrected = [municipality for municipality in municipalities if municipality not in remove]
+
+    for municipality in correction.get("add", []):
+        if municipality not in corrected:
+            corrected.append(municipality)
+
+    return corrected
 
 
 def main():
@@ -54,9 +75,12 @@ def main():
             if municipality:
                 municipalities = [municipality]
 
+        code = clean(row.get("Codi_Zona ocult"))
+        municipalities = apply_municipality_corrections(code, municipalities)
+
         services.append(
             {
-                "code": clean(row.get("Codi_Zona ocult")),
+                "code": code,
                 "sez_code": clean(row.get("Codi_SEI ocult")),
                 "name": name,
                 "territorial_area": clean(row.get("ST taula:visu")),
