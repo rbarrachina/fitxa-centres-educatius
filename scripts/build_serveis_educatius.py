@@ -28,7 +28,7 @@ def split_municipalities(value):
     if not raw:
         return []
 
-    parts = raw.splitlines() if "\n" in raw or "\r" in raw else raw.split(",")
+    parts = raw.splitlines()
     return [part.strip() for part in parts if part.strip()]
 
 
