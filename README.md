@@ -5,6 +5,7 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 ## Funcionalitats
 
 - Cerca per codi de centre (8 dígits), nom del centre o municipi.
+- Càrrega directa d'una fitxa passant el codi de centre a la URL amb `?codi=XXXXXXXX`.
 - Selecció de centre quan hi ha múltiples coincidències.
 - Fitxa amb camps principals (nom, naturalesa, titularitat, adreça, municipi, etc.).
 - Botons d'acció (copiar, web, telèfon amb enllaç `tel:`, veure mapa).
@@ -66,6 +67,10 @@ npm run serve
 3. Obrir:
 
 `http://127.0.0.1:8000/`
+
+També es pot obrir directament una fitxa concreta afegint el paràmetre `codi` amb el codi de centre de 8 dígits:
+
+`http://127.0.0.1:8000/?codi=08012345`
 
 ## Modes d'execució
 

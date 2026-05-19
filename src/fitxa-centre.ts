@@ -1873,6 +1873,20 @@
         }
       };
 
+      const loadCentreFromUrl = (): void => {
+        const urlCode = new URLSearchParams(window.location.search).get("codi");
+        if (urlCode === null) return;
+
+        const code = urlCode.trim();
+        codeInput.value = code;
+        if (!/^\d{8}$/.test(code)) {
+          setMessage("El paràmetre de URL 'codi' ha de tenir 8 dígits.", true);
+          return;
+        }
+
+        void loadCentre();
+      };
+
       loadButton.addEventListener("click", loadCentre);
       infoButton.addEventListener("click", openInfoModal);
       closeInfoModalButton.addEventListener("click", closeInfoModal);
@@ -2089,6 +2103,7 @@
       });
 
       codeInput.value = "";
+      loadCentreFromUrl();
     };
 
   document.addEventListener("DOMContentLoaded", () => {
