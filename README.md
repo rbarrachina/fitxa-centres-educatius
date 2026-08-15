@@ -9,24 +9,63 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 - Selecció de centre quan hi ha múltiples coincidències.
 - Fitxa amb camps principals (nom, naturalesa, titularitat, adreça, municipi, etc.).
 - Botons d'acció (copiar, web, telèfon amb enllaç `tel:`, veure mapa).
-- Fila `Codis` amb botó `Veure codis` per obrir un popup amb codis administratius.
-- Fila `Estudis` amb botó `Veure matrícula` per obrir un popup amb la matrícula d'alumnes de l'últim curs disponible.
+- Fila `Codis` amb botó `Veure codis` per desplegar sota la fila un acordió amb els codis administratius.
+- Fila `Estudis` amb botó `Veure matrícula` per desplegar sota la fila un acordió amb la matrícula d'alumnes de l'últim curs disponible.
   - Mostra `Nom ensenyament`, `Nivell`, `Matrícula` i `Grups`.
   - Ordena els resultats per INF, PRIM, SEC, BATX, FP i altres.
   - En idiomes, ordena els nivells com a bàsic, intermedi i avançat.
   - Inclou el curs de les dades, la data de l'última actualització del dataset i l'enllaç a la font.
   - Si el curs del dataset no correspon al curs escolar actual, mostra un avís `⚠️`. El curs escolar es considera de l'1 de setembre al 31 d'agost.
 - Fila `Personal docent` amb el total de docents del centre en l'últim curs disponible; si no hi ha dades, mostra `Sense dades`.
-  - Quan hi ha dades, el botó `Veure espacialitats` obre un popup amb `Especialitat`, `Dotació` i `Ocupació definitiva`.
+  - Quan hi ha dades, el botó `Veure especialitats` desplega un acordió amb `Especialitat`, `Dotació` i `Ocupació definitiva`.
 - Fila `Servei educatiu` amb el Servei Educatiu de Zona associat, botó `Web SE` quan la font en proporciona l'URL i botó `Veure mapa`.
 - El camp `Nom districte municipal` només es mostra si té valor.
-- Mapes en modal:
+- Mapes integrats dins de la fitxa, just sota la fila corresponent:
   - ubicació del centre,
   - àrea territorial,
   - servei educatiu,
   - comarca,
   - municipi.
+- Els controls de mapa, matrícula, codis i especialitats mostren una fletxa avall quan estan plegats i amunt quan estan desplegats. Només es permet tenir un acordió obert alhora.
+- Durant la càrrega d'un mapa només es mostra l'estat de càrrega; el llenç del mapa apareix quan està preparat per evitar la sensació visual de dos panells superposats.
 - Els popups no superen l'alçada de la finestra i mostren desplaçament vertical quan el contingut és llarg.
+
+## Disseny de la interfície
+
+La interfície utilitza un disseny minimalista i integrat a tota la finestra del navegador:
+
+- El contingut principal no està tancat dins d'una capsa o targeta exterior; forma part directament del fons de la pàgina.
+- La capçalera conté només la identitat de l'aplicació i el selector de tema, per mantenir l'accés principal net.
+- L'autoria, l'any, el repositori, la llicència i els crèdits de tercers es presenten en un peu de pàgina compacte, que és la ubicació habitual per a aquesta informació secundària i legal.
+- La portada prioritza una jerarquia clara: etiqueta de context, títol principal, descripció breu i cercador.
+- Es manté la paleta verda original mitjançant variables CSS, amb degradats suaus i superfícies translúcides.
+- Tota la interfície utilitza la tipografia variable `Inter`, allotjada localment al projecte per evitar dependències externes en temps d'execució.
+- La capçalera incorpora un selector de tema clar/fosc amb icones de sol i lluna.
+- En la primera visita, el tema fosc és el predeterminat; quan l'usuari el canvia, la selecció es conserva a `localStorage` amb la clau `centres-theme`.
+- El tema s'aplica abans de carregar els estils per evitar un flaix de color incorrecte, i el botó actualitza l'etiqueta accessible segons l'acció disponible.
+- El cercador agrupa el camp de text i l'acció principal en una única superfície visual.
+- El botó `Cerca` s'inspira en la interacció `Download for Mac` d'Amicro: mostra una lupa abans del text en repòs i, en hover, la substitueix suaument per una fletxa després del text.
+- El color del botó `Cerca` utilitza un verd profund amb un degradat i una ombra continguts, adaptats específicament als temes clar i fosc perquè destaqui sense desentonar amb la resta de superfícies.
+- En desplaçar-se pels resultats o per una fitxa llarga, el cercador queda fixat temporalment a la part superior de la finestra per mantenir disponible una nova consulta.
+- Les coincidències no tenen un desplaçament intern independent: tots els resultats formen part del desplaçament general de la pàgina.
+- En iniciar una cerca vàlida, la pàgina es desplaça automàticament fins al context del cercador i els resultats; el moviment és suau excepte quan el sistema indica que cal reduir les animacions.
+- El titular i la resta de la portada queden per sobre del viewport després de la cerca i tornen a aparèixer quan l'usuari es desplaça cap amunt.
+- Els botons principals tenen forma de píndola, estats de focus visibles i microinteraccions breus en passar-hi el cursor o prémer-los.
+- Els botons d'acció de la fitxa, dels resultats i dels popups comparteixen la mateixa forma de píndola translúcida, vora fina i resposta visual suau; el botó `Cerca` conserva més contrast com a acció principal.
+- Tots aquests botons secundaris mantenen una alçada comuna de `38px`, també quan hi ha diverses accions dins de la mateixa fila.
+- En el tema clar, tots els botons secundaris comparteixen el verd clar de la superfície `Web`; `Cerca` conserva el verd fosc per mantenir la jerarquia principal.
+- Cada botó amb text incorpora abans una icona representativa de la seva acció. La fletxa de `Veure mapa` indica el desplegament i la de `Tria` indica l'accés a la fitxa seleccionada.
+- El botó `Tria` adopta una microinteracció inspirada en `Text Reveal`: la fletxa gira 45 graus en hover i el botó escala suaument en hover i en prémer-lo, mentre el text es manté fix.
+- Les taules i les llistes de coincidències conserven una estructura diferenciada per facilitar la lectura de les dades, amb vores i ombres discretes.
+- En pantalles de fins a `760px`, el cercador passa a disposició vertical, el títol adapta la mida i els controls secundaris es simplifiquen.
+- La interfície evita el desplaçament horitzontal en dispositius mòbils.
+
+Els elements i identificadors que utilitza el JavaScript (`#code`, `#load`, `#message`, `#fitxaMatches` i `#resultTable`) es mantenen separats de les decisions purament visuals. Això permet continuar modificant l'estil sense alterar el funcionament de la cerca.
+
+Els canvis de presentació es concentren principalment en:
+
+- `web/index.html`: estructura semàntica de la capçalera, la portada, el cercador i el peu de pàgina.
+- `web/css/fitxa-centre.css`: paleta, composició, components, transicions i comportament responsive.
 
 ## Arquitectura
 
@@ -157,7 +196,8 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
    - S'usa per pintar només el districte en els Serveis Educatius de Zona de Barcelona ciutat.
 
 10. Cartografia base (Leaflet + OpenStreetMap tiles)
-   - Leaflet CDN: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js`
+   - Leaflet CDN: `https://unpkg.com/leaflet@1.9.4/dist/leaflet.js` i `leaflet.css`
+   - El CSS i el JavaScript de Leaflet es carreguen sota demanda quan l'usuari desplega el primer mapa; no bloquegen la primera pintura de la portada.
    - Tiles OSM: `https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png`
 
 ## Llicències i atribució de tercers
@@ -227,6 +267,14 @@ L'aplicació consumeix dades i serveis externs en temps d'execució:
 
 - Origen: repositori `rbarrachina/recollida_excedent`.
 - El repositori inclou llicència **CC BY-SA 4.0** (fitxer `LICENSE`).
+
+### 12) Tipografia Inter
+
+- Família tipogràfica: **Inter Variable**.
+- Origen: projecte oficial d'[Inter](https://github.com/rsms/inter).
+- Llicència: **SIL Open Font License 1.1 (OFL-1.1)**.
+- Fitxer de font local: `web/assets/fonts/inter/InterVariable.woff2`.
+- Còpia local de la llicència: `web/assets/fonts/inter/OFL.txt`.
 
 ## Llicència del projecte
 

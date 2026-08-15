@@ -1,10 +1,5 @@
 (() => {
   type SocrataRow = Record<string, unknown>;
-  type PolygonMapState = {
-    map: any | null;
-    layer: any | null;
-    centreLayer: any | null;
-  };
   type EducationalService = {
     code: string;
     sez_code: string;
@@ -40,12 +35,60 @@
     "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson";
   const BARCELONA_DISTRICTS_URL =
     "https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download";
+  const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
+  const LEAFLET_JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
+  const LEAFLET_CSS_INTEGRITY = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
+  const LEAFLET_JS_INTEGRITY = "sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=";
+  let leafletPromise: Promise<any> | null = null;
   let currentCoursePromise: Promise<string> | null = null;
   let currentCourseRowsPromise: Promise<SocrataRow[]> | null = null;
   let teachingStaffCoursePromise: Promise<string> | null = null;
   let teachingStaffSpecialtiesCoursePromise: Promise<string> | null = null;
   let educationalServicesPromise: Promise<EducationalService[]> | null = null;
   let barcelonaDistrictsFeaturesPromise: Promise<SocrataRow[]> | null = null;
+
+  const loadLeaflet = (): Promise<any> => {
+    const loadedLeaflet = (window as any).L;
+    if (loadedLeaflet) return Promise.resolve(loadedLeaflet);
+    if (leafletPromise) return leafletPromise;
+
+    const stylesheetPromise = new Promise<void>((resolve, reject) => {
+      const stylesheet = document.createElement("link");
+      stylesheet.rel = "stylesheet";
+      stylesheet.href = LEAFLET_CSS_URL;
+      stylesheet.integrity = LEAFLET_CSS_INTEGRITY;
+      stylesheet.crossOrigin = "anonymous";
+      stylesheet.dataset.leafletAsset = "stylesheet";
+      stylesheet.addEventListener("load", () => resolve(), { once: true });
+      stylesheet.addEventListener("error", () => reject(new Error("No s'ha pogut carregar l'estil del mapa.")), { once: true });
+      document.head.append(stylesheet);
+    });
+
+    const scriptPromise = new Promise<void>((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = LEAFLET_JS_URL;
+      script.integrity = LEAFLET_JS_INTEGRITY;
+      script.crossOrigin = "anonymous";
+      script.async = true;
+      script.dataset.leafletAsset = "script";
+      script.addEventListener("load", () => resolve(), { once: true });
+      script.addEventListener("error", () => reject(new Error("No s'ha pogut carregar el mapa.")), { once: true });
+      document.head.append(script);
+    });
+
+    leafletPromise = Promise.all([stylesheetPromise, scriptPromise])
+      .then(() => {
+        const leaflet = (window as any).L;
+        if (!leaflet) throw new Error("No s'ha pogut inicialitzar el mapa.");
+        return leaflet;
+      })
+      .catch((error) => {
+        leafletPromise = null;
+        document.querySelectorAll("[data-leaflet-asset]").forEach((asset) => asset.remove());
+        throw error;
+      });
+    return leafletPromise;
+  };
   const KEY_LABELS: Record<string, string> = {
     any: "Any",
     curs: "Curs",
@@ -843,30 +886,7 @@
       const metaEl = byId<HTMLDivElement>("meta");
       const resultTable = byId<HTMLTableElement>("resultTable");
       const resultBody = byId<HTMLTableSectionElement>("resultBody");
-      const infoButton = byId<HTMLButtonElement>("infoButton");
-      const infoModalBackdrop = byId<HTMLDivElement>("infoModalBackdrop");
-      const closeInfoModalButton = byId<HTMLButtonElement>("closeInfoModal");
-      const mapModalBackdrop = byId<HTMLDivElement>("mapModalBackdrop");
-      const closeMapModalButton = byId<HTMLButtonElement>("closeMapModal");
-      const mapLeafletContainer = byId<HTMLDivElement>("mapLeaflet");
-      const openMapLink = byId<HTMLAnchorElement>("openMapLink");
-      const mapCoordsLabel = byId<HTMLSpanElement>("mapCoordsLabel");
-      const territorialMapModalBackdrop = byId<HTMLDivElement>("territorialMapModalBackdrop");
-      const closeTerritorialMapModalButton = byId<HTMLButtonElement>("closeTerritorialMapModal");
-      const territorialNameLabel = byId<HTMLSpanElement>("territorialNameLabel");
-      const territorialMapContainer = byId<HTMLDivElement>("territorialMap");
-      const comarcaMapModalBackdrop = byId<HTMLDivElement>("comarcaMapModalBackdrop");
-      const closeComarcaMapModalButton = byId<HTMLButtonElement>("closeComarcaMapModal");
-      const comarcaNameLabel = byId<HTMLSpanElement>("comarcaNameLabel");
-      const comarcaMapContainer = byId<HTMLDivElement>("comarcaMap");
-      const municipiMapModalBackdrop = byId<HTMLDivElement>("municipiMapModalBackdrop");
-      const closeMunicipiMapModalButton = byId<HTMLButtonElement>("closeMunicipiMapModal");
-      const municipiNameLabel = byId<HTMLSpanElement>("municipiNameLabel");
-      const municipiMapContainer = byId<HTMLDivElement>("municipiMap");
-      const educationalServiceMapModalBackdrop = byId<HTMLDivElement>("educationalServiceMapModalBackdrop");
-      const closeEducationalServiceMapModalButton = byId<HTMLButtonElement>("closeEducationalServiceMapModal");
-      const educationalServiceNameLabel = byId<HTMLSpanElement>("educationalServiceNameLabel");
-      const educationalServiceMapContainer = byId<HTMLDivElement>("educationalServiceMap");
+      const themeButton = byId<HTMLButtonElement>("themeButton");
       const codesModalBackdrop = byId<HTMLDivElement>("codesModalBackdrop");
       const closeCodesModalButton = byId<HTMLButtonElement>("closeCodesModal");
       const codesModalBody = byId<HTMLTableSectionElement>("codesModalBody");
@@ -881,12 +901,10 @@
       const staffDataWarningModalBackdrop = byId<HTMLDivElement>("staffDataWarningModalBackdrop");
       const closeStaffDataWarningModalButton = byId<HTMLButtonElement>("closeStaffDataWarningModal");
       const staffDataWarningText = byId<HTMLParagraphElement>("staffDataWarningText");
-      let centreMap: any = null;
-      let centreMapLayer: any = null;
-      const territorialMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
-      const comarcaMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
-      const municipiMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
-      const educationalServiceMapState: PolygonMapState = { map: null, layer: null, centreLayer: null };
+      let inlineMapRow: HTMLTableRowElement | null = null;
+      let inlineMap: any = null;
+      let activeInlineMapButton: HTMLButtonElement | null = null;
+      let inlineMapSequence = 0;
       let territorialFeaturesPromise: Promise<SocrataRow[]> | null = null;
       let comarquesFeaturesPromise: Promise<SocrataRow[]> | null = null;
       let municipisFeaturesPromise: Promise<SocrataRow[]> | null = null;
@@ -901,6 +919,64 @@
         messageEl.classList.toggle("error", isError);
       };
 
+      type Theme = "light" | "dark";
+      const applyTheme = (theme: Theme, persist = false): void => {
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+        const nextThemeLabel = theme === "dark" ? "Activa el tema clar" : "Activa el tema fosc";
+        themeButton.setAttribute("aria-label", nextThemeLabel);
+        themeButton.setAttribute("title", nextThemeLabel);
+        themeButton.setAttribute("aria-pressed", String(theme === "dark"));
+
+        if (!persist) return;
+        try {
+          localStorage.setItem("centres-theme", theme);
+        } catch {
+          // El tema continua actiu durant la sessió encara que no es pugui desar.
+        }
+      };
+
+      const initialTheme: Theme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
+      applyTheme(initialTheme);
+
+      const scrollSearchIntoView = (): void => {
+        const searchContext = document.querySelector<HTMLElement>(".hero-description");
+        if (!searchContext) return;
+
+        window.requestAnimationFrame(() => {
+          const top = window.scrollY + searchContext.getBoundingClientRect().top - 18;
+          const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+          window.scrollTo({
+            top: Math.max(0, top),
+            behavior: prefersReducedMotion ? "auto" : "smooth",
+          });
+        });
+      };
+
+      const actionIcon = (content: string): string =>
+        `<svg class="action-button-icon" aria-hidden="true" viewBox="0 0 24 24">${content}</svg>`;
+      const actionIcons = {
+        copy: actionIcon('<rect x="9" y="9" width="11" height="11" rx="2"></rect><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>'),
+        phone: actionIcon('<path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6A19.79 19.79 0 0 1 2.12 4.18 2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.12.9.33 1.78.62 2.63a2 2 0 0 1-.45 2.11L8 9.73a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.85.29 1.73.5 2.63.62A2 2 0 0 1 22 16.92Z"></path>'),
+        web: actionIcon('<path d="M14 3h7v7"></path><path d="m10 14 11-11"></path><path d="M21 14v5a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5"></path>'),
+        globe: actionIcon('<circle cx="12" cy="12" r="9"></circle><path d="M3 12h18"></path><path d="M12 3a15.3 15.3 0 0 1 0 18"></path><path d="M12 3a15.3 15.3 0 0 0 0 18"></path>'),
+        codes: actionIcon('<path d="M8 6h13"></path><path d="M8 12h13"></path><path d="M8 18h13"></path><circle cx="3" cy="6" r="1"></circle><circle cx="3" cy="12" r="1"></circle><circle cx="3" cy="18" r="1"></circle>'),
+        enrollment: actionIcon('<path d="m3 10 9-5 9 5-9 5-9-5Z"></path><path d="M7 12.2V17c2.8 2 7.2 2 10 0v-4.8"></path>'),
+        staff: actionIcon('<path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M22 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path>'),
+        select: '<svg class="action-button-icon select-arrow-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>',
+      };
+      const expandToggleIcon =
+        '<svg class="map-toggle-icon" aria-hidden="true" viewBox="0 0 12 12">' +
+          '<path d="m3 4.5 3 3 3-3"></path>' +
+        '</svg>';
+      const mapButtonContent =
+        '<svg class="action-button-icon map-button-icon" aria-hidden="true" viewBox="0 0 24 24">' +
+          '<path d="M20 10c0 5-8 11-8 11S4 15 4 10a8 8 0 1 1 16 0Z"></path>' +
+          '<circle cx="12" cy="10" r="2.5"></circle>' +
+        '</svg>' +
+        '<span class="map-button-label">Veure mapa</span>' +
+        expandToggleIcon;
+
       const buildCellValue = (label: string, value: string): string => {
         const safeValue = value || "";
         const isEmailField = /correu/i.test(label) && /@/.test(safeValue);
@@ -914,43 +990,43 @@
         const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
         const escaped = escapeHtml(safeValue);
         if (isEmailField) {
-          return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" data-copy-message="Correu copiat al porta-retalls." type="button">Copiar</button></div>`;
+          return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" data-copy-message="Correu copiat al porta-retalls." type="button">${actionIcons.copy}<span>Copiar</span></button></div>`;
         }
         if (phoneNumber) {
           const safePhone = escapeHtml(phoneNumber);
-          return `<div class="coord-with-map"><span>${escaped}</span><button class="phone-copy-btn" data-copy-phone="${safePhone}" type="button">Copiar</button><a class="call-btn" href="tel:${safePhone}">Trucar</a></div>`;
+          return `<div class="coord-with-map"><span>${escaped}</span><button class="phone-copy-btn" data-copy-phone="${safePhone}" type="button">${actionIcons.copy}<span>Copiar</span></button><a class="call-btn" href="tel:${safePhone}">${actionIcons.phone}<span>Trucar</span></a></div>`;
         }
         if (webUrl) {
           const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
           const safeOpenUrl = escapeHtml(normalizedUrl);
-          return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn copy-btn-light" data-copy="${escaped}" data-copy-message="URL copiada al porta-retalls." type="button">Copiar</button><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">Web</button></div>`;
+          return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn copy-btn-light" data-copy="${escaped}" data-copy-message="URL copiada al porta-retalls." type="button">${actionIcons.copy}<span>Copiar</span></button><button class="web-btn" data-open-url="${safeOpenUrl}" type="button">${actionIcons.web}<span>Web</span></button></div>`;
         }
         if (isAddressField) {
           const mapX = escapeHtml(currentCentreForTerritorial?.x || "");
           const mapY = escapeHtml(currentCentreForTerritorial?.y || "");
           const mapName = encodeURIComponent(String(currentCentreForTerritorial?.name || "").trim());
           if (mapX && mapY) {
-            return `<div class="coord-with-map"><span>${escaped}</span><button class="map-btn" type="button" data-map-x="${mapX}" data-map-y="${mapY}" data-map-name="${mapName}">Veure mapa</button></div>`;
+            return `<div class="coord-with-map"><span>${escaped}</span><button class="map-btn" type="button" aria-label="Veure mapa" title="Veure mapa" aria-expanded="false" data-map-x="${mapX}" data-map-y="${mapY}" data-map-name="${mapName}">${mapButtonContent}</button></div>`;
           }
         }
         if (isTerritorialField && safeValue && safeValue !== "-") {
           const centreName = escapeHtml(currentCentreForTerritorial?.name || "");
           const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
           const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
-          return `<div class="coord-with-map"><span>${escaped}</span><button class="territorial-map-btn" data-territorial-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button></div>`;
+          return `<div class="coord-with-map"><span>${escaped}</span><button class="territorial-map-btn" aria-label="Veure mapa" title="Veure mapa" aria-expanded="false" data-territorial-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">${mapButtonContent}</button></div>`;
         }
         if (isComarcaField && safeValue && safeValue !== "-") {
           const centreName = escapeHtml(currentCentreForTerritorial?.name || "");
           const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
           const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
-          return `<div class="coord-with-map"><span>${escaped}</span><button class="comarca-map-btn" data-comarca-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button></div>`;
+          return `<div class="coord-with-map"><span>${escaped}</span><button class="comarca-map-btn" aria-label="Veure mapa" title="Veure mapa" aria-expanded="false" data-comarca-name="${escaped}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">${mapButtonContent}</button></div>`;
         }
         if (isMunicipiField && safeValue && safeValue !== "-") {
           const centreName = escapeHtml(currentCentreForTerritorial?.name || "");
           const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
           const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
           const municipalityName = escapeHtml((currentMunicipalityForMap || safeValue).replace(/\s*\(.*\)\s*$/, ""));
-          return `<div class="coord-with-map"><span>${escaped}</span><button class="municipi-map-btn" data-municipi-name="${municipalityName}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button></div>`;
+          return `<div class="coord-with-map"><span>${escaped}</span><button class="municipi-map-btn" aria-label="Veure mapa" title="Veure mapa" aria-expanded="false" data-municipi-name="${municipalityName}" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">${mapButtonContent}</button></div>`;
         }
         return escaped;
       };
@@ -963,16 +1039,16 @@
       };
 
       const buildCodesButtonRow = (): string =>
-        '<tr><th>Codis</th><td><button class="codes-btn" type="button">Veure codis</button></td></tr>';
+        `<tr><th>Codis</th><td><button class="codes-btn" type="button" aria-expanded="false" aria-label="Veure codis" title="Veure codis" data-collapsed-label="Veure codis" data-expanded-label="Plegar codis">${actionIcons.codes}<span>Veure codis</span>${expandToggleIcon}</button></td></tr>`;
 
       const buildEnrollmentButtonRow = (studiesValue: string): string => {
         const safeStudies = escapeHtml(studiesValue || "-");
-        return `<tr><th>Estudis</th><td><div class="coord-with-map"><span>${safeStudies}</span><button class="enrollment-btn" type="button">Veure matrícula</button></div></td></tr>`;
+        return `<tr><th>Estudis</th><td><div class="coord-with-map"><span>${safeStudies}</span><button class="enrollment-btn" type="button" aria-expanded="false" aria-label="Veure matrícula" title="Veure matrícula" data-collapsed-label="Veure matrícula" data-expanded-label="Plegar matrícula">${actionIcons.enrollment}<span>Veure matrícula</span>${expandToggleIcon}</button></div></td></tr>`;
       };
       const buildTeachingStaffRow = (teachingStaffValue: string): string => {
         const safeValue = escapeHtml(teachingStaffValue || "Sense dades");
         const button = teachingStaffValue && teachingStaffValue !== "Sense dades"
-          ? '<button class="teaching-staff-specialties-btn" type="button">Veure espacialitats</button>'
+          ? `<button class="teaching-staff-specialties-btn" type="button" aria-expanded="false" aria-label="Veure especialitats" title="Veure especialitats" data-collapsed-label="Veure especialitats" data-expanded-label="Plegar especialitats">${actionIcons.staff}<span>Veure especialitats</span>${expandToggleIcon}</button>`
           : "";
         return `<tr><th>Personal docent</th><td><div class="coord-with-map"><span>${safeValue}</span>${button}</div></td></tr>`;
       };
@@ -983,7 +1059,7 @@
         const centreX = escapeHtml(currentCentreForTerritorial?.x || "");
         const centreY = escapeHtml(currentCentreForTerritorial?.y || "");
         const mapButton = service
-          ? `<button class="educational-service-map-btn" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">Veure mapa</button>`
+          ? `<button class="educational-service-map-btn" aria-label="Veure mapa" title="Veure mapa" aria-expanded="false" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">${mapButtonContent}</button>`
           : "";
         const webUrl = normalizeWebUrl(service?.web || "");
         if (!webUrl) {
@@ -991,31 +1067,9 @@
         }
         const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
         const safeOpenUrl = escapeHtml(normalizedUrl);
-        return `<tr><th>Servei educatiu</th><td><div class="coord-with-map educational-service-actions"><span>${safeName}</span>${mapButton}<button class="web-btn web-se-btn" data-open-url="${safeOpenUrl}" type="button">Web SE</button></div></td></tr>`;
+        return `<tr><th>Servei educatiu</th><td><div class="coord-with-map educational-service-actions"><span>${safeName}</span>${mapButton}<button class="web-btn web-se-btn" data-open-url="${safeOpenUrl}" type="button">${actionIcons.globe}<span>Web SE</span></button></div></td></tr>`;
       };
 
-      const closeMapModal = (): void => {
-        mapModalBackdrop.classList.add("hidden");
-      };
-      const closeInfoModal = (): void => {
-        infoModalBackdrop.classList.add("hidden");
-      };
-      const openInfoModal = (): void => {
-        infoModalBackdrop.classList.remove("hidden");
-      };
-
-      const closeTerritorialMapModal = (): void => {
-        territorialMapModalBackdrop.classList.add("hidden");
-      };
-      const closeComarcaMapModal = (): void => {
-        comarcaMapModalBackdrop.classList.add("hidden");
-      };
-      const closeMunicipiMapModal = (): void => {
-        municipiMapModalBackdrop.classList.add("hidden");
-      };
-      const closeEducationalServiceMapModal = (): void => {
-        educationalServiceMapModalBackdrop.classList.add("hidden");
-      };
       const closeCodesModal = (): void => {
         codesModalBackdrop.classList.add("hidden");
       };
@@ -1275,31 +1329,6 @@
         return Array.from(selected.values());
       };
 
-      const getOrCreateLeafletMap = (state: PolygonMapState, container: HTMLDivElement, leaflet: any): any => {
-        if (state.map) return state.map;
-        state.map = leaflet.map(container, {
-          zoomControl: true,
-          scrollWheelZoom: true,
-        });
-        leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-          attribution:
-            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
-          maxZoom: 18,
-        }).addTo(state.map);
-        return state.map;
-      };
-
-      const clearPolygonMapState = (state: PolygonMapState): void => {
-        if (state.layer) {
-          state.layer.remove();
-          state.layer = null;
-        }
-        if (state.centreLayer) {
-          state.centreLayer.remove();
-          state.centreLayer = null;
-        }
-      };
-
       const addCentreMarker = (leaflet: any, map: any, centreName: string, centreX: string, centreY: string): any | null => {
         const x = Number(centreX);
         const y = Number(centreY);
@@ -1327,16 +1356,316 @@
         return centreLayer;
       };
 
-      const openPolygonMapModal = async (
+      type InlineMapContext = {
+        sequence: number;
+        row: HTMLTableRowElement;
+        container: HTMLDivElement;
+        status: HTMLDivElement;
+        meta: HTMLDivElement;
+      };
+
+      const setInlineMapButtonState = (button: HTMLButtonElement, expanded: boolean): void => {
+        button.classList.toggle("is-expanded", expanded);
+        button.setAttribute("aria-expanded", String(expanded));
+        const collapsedLabel = button.dataset.collapsedLabel || "Veure mapa";
+        const expandedLabel = button.dataset.expandedLabel || "Plegar mapa";
+        button.setAttribute("aria-label", expanded ? expandedLabel : collapsedLabel);
+        button.title = expanded ? expandedLabel : collapsedLabel;
+        if (!expanded) button.removeAttribute("aria-controls");
+      };
+
+      const closeInlineMap = async (immediate = false): Promise<void> => {
+        const row = inlineMapRow;
+        const map = inlineMap;
+        const button = activeInlineMapButton;
+        inlineMapSequence += 1;
+        inlineMapRow = null;
+        inlineMap = null;
+        activeInlineMapButton = null;
+        if (button) setInlineMapButtonState(button, false);
+        if (!row) {
+          if (map) map.remove();
+          return;
+        }
+
+        row.classList.remove("is-open");
+        const reducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+        const delay = immediate || reducedMotion ? 0 : 280;
+        await new Promise<void>((resolve) => window.setTimeout(resolve, delay));
+        if (map) map.remove();
+        row.remove();
+      };
+
+      const prepareInlineMap = async (button: HTMLButtonElement, title: string, subtitle = ""): Promise<InlineMapContext | null> => {
+        if (activeInlineMapButton === button) {
+          await closeInlineMap();
+          return null;
+        }
+
+        await closeInlineMap();
+        const sourceRow = button.closest("tr");
+        if (!(sourceRow instanceof HTMLTableRowElement)) return null;
+
+        inlineMapSequence += 1;
+        const sequence = inlineMapSequence;
+        const panelId = `inline-map-${sequence}`;
+        const row = document.createElement("tr");
+        row.className = "inline-map-row";
+        row.innerHTML =
+          '<td colspan="2">' +
+            '<div class="inline-map-shell">' +
+              '<div class="inline-map-content">' +
+                '<div class="inline-map-header">' +
+                  '<div class="inline-map-heading">' +
+                    `<strong>${escapeHtml(title)}</strong>` +
+                    (subtitle ? `<span>${escapeHtml(subtitle)}</span>` : "") +
+                  '</div>' +
+                  '<div class="inline-map-meta"></div>' +
+                '</div>' +
+                '<div class="inline-map-status" role="status">Carregant mapa…</div>' +
+                `<div id="${panelId}" class="inline-map-canvas hidden" aria-label="${escapeHtml(title)}"></div>` +
+              '</div>' +
+            '</div>' +
+          '</td>';
+        sourceRow.after(row);
+
+        inlineMapRow = row;
+        activeInlineMapButton = button;
+        button.setAttribute("aria-controls", panelId);
+        setInlineMapButtonState(button, true);
+        window.requestAnimationFrame(() => row.classList.add("is-open"));
+
+        return {
+          sequence,
+          row,
+          container: row.querySelector<HTMLDivElement>(".inline-map-canvas")!,
+          status: row.querySelector<HTMLDivElement>(".inline-map-status")!,
+          meta: row.querySelector<HTMLDivElement>(".inline-map-meta")!,
+        };
+      };
+
+      type InlineDetailsContext = {
+        sequence: number;
+        row: HTMLTableRowElement;
+        description: HTMLParagraphElement;
+        body: HTMLDivElement;
+      };
+
+      const prepareInlineDetails = async (button: HTMLButtonElement, title: string): Promise<InlineDetailsContext | null> => {
+        if (activeInlineMapButton === button) {
+          await closeInlineMap();
+          return null;
+        }
+
+        await closeInlineMap();
+        const sourceRow = button.closest("tr");
+        if (!(sourceRow instanceof HTMLTableRowElement)) return null;
+
+        inlineMapSequence += 1;
+        const sequence = inlineMapSequence;
+        const panelId = `inline-details-${sequence}`;
+        const row = document.createElement("tr");
+        row.className = "inline-map-row inline-details-row";
+        row.innerHTML =
+          '<td colspan="2">' +
+            '<div class="inline-map-shell">' +
+              '<div class="inline-map-content">' +
+                '<div class="inline-map-header">' +
+                  '<div class="inline-map-heading">' +
+                    `<strong>${escapeHtml(title)}</strong>` +
+                  '</div>' +
+                '</div>' +
+                `<div id="${panelId}" class="inline-details-content">` +
+                  '<p class="inline-details-description">Carregant…</p>' +
+                  '<div class="inline-details-body"></div>' +
+                '</div>' +
+              '</div>' +
+            '</div>' +
+          '</td>';
+        sourceRow.after(row);
+
+        inlineMapRow = row;
+        activeInlineMapButton = button;
+        button.setAttribute("aria-controls", panelId);
+        setInlineMapButtonState(button, true);
+        window.requestAnimationFrame(() => row.classList.add("is-open"));
+
+        return {
+          sequence,
+          row,
+          description: row.querySelector<HTMLParagraphElement>(".inline-details-description")!,
+          body: row.querySelector<HTMLDivElement>(".inline-details-body")!,
+        };
+      };
+
+      const isInlineMapCurrent = (context: { sequence: number; row: HTMLTableRowElement }): boolean =>
+        context.sequence === inlineMapSequence && context.row === inlineMapRow;
+
+      const showInlineMapError = (context: InlineMapContext, message: string): void => {
+        if (!isInlineMapCurrent(context)) return;
+        context.status.textContent = message;
+        context.status.classList.add("error");
+        context.container.classList.add("hidden");
+      };
+
+      const toggleCodesInline = async (button: HTMLButtonElement): Promise<void> => {
+        const context = await prepareInlineDetails(button, "Codis administratius");
+        if (!context) return;
+        context.description.remove();
+        context.body.innerHTML =
+          '<table class="codes-table inline-details-table"><tbody>' +
+            codesModalBody.innerHTML +
+          '</tbody></table>';
+      };
+
+      const toggleEnrollmentInline = async (button: HTMLButtonElement): Promise<void> => {
+        if (!currentCentreCode) return;
+        const context = await prepareInlineDetails(button, "Matrícula d’alumnes");
+        if (!context) return;
+        context.description.textContent = "Carregant matrícula…";
+
+        try {
+          const enrollment = await fetchEnrollmentRows(currentCentreCode);
+          if (!isInlineMapCurrent(context)) return;
+          const courseWarning = isCurrentDateInsideSchoolCourse(enrollment.course) ? "" : " ⚠️";
+          context.description.innerHTML =
+            `Dades del curs ${escapeHtml(enrollment.course)}.${escapeHtml(courseWarning)} ` +
+            `Última actualització: ${escapeHtml(enrollment.updatedAt)}. ` +
+            `<a href="${escapeHtml(enrollment.sourceUrl)}" target="_blank" rel="noopener noreferrer">Font</a>`;
+
+          const rows = enrollment.rows.length
+            ? enrollment.rows.map((item) => {
+                const name = escapeHtml(asText(item.nom_ensenyament) || "-");
+                const level = escapeHtml(asText(item.nivell) || "-");
+                const total = escapeHtml(asText(item.matricules_total) || "0");
+                const groups = escapeHtml(asText(item.grups) || "0");
+                return `<tr><td>${name}</td><td>${level}</td><td>${total}</td><td>${groups}</td></tr>`;
+              }).join("")
+            : '<tr><td colspan="4">No hi ha dades de matrícula per a aquest centre en l’últim curs.</td></tr>';
+          context.body.innerHTML =
+            '<table class="enrollment-table inline-details-table">' +
+              '<thead><tr><th>Nom ensenyament</th><th>Nivell</th><th>Matrícula</th><th>Grups</th></tr></thead>' +
+              `<tbody>${rows}</tbody>` +
+            '</table>';
+        } catch (error: any) {
+          if (!isInlineMapCurrent(context)) return;
+          context.description.textContent = `Error de connexió: ${error.message}`;
+          context.body.innerHTML = "";
+        }
+      };
+
+      const toggleTeachingStaffInline = async (button: HTMLButtonElement): Promise<void> => {
+        if (!currentCentreCode) return;
+        const context = await prepareInlineDetails(button, "Especialitats del personal docent");
+        if (!context) return;
+        context.description.textContent = "Carregant especialitats…";
+
+        try {
+          const specialties = await fetchTeachingStaffSpecialties(currentCentreCode);
+          if (!isInlineMapCurrent(context)) return;
+          context.description.innerHTML =
+            `Dades del curs ${escapeHtml(specialties.course)}. ` +
+            `<a href="${escapeHtml(specialties.sourceUrl)}" target="_blank" rel="noopener noreferrer">Font</a>`;
+
+          const renderSpecialtyNumber = (value: unknown, warnExactFive: boolean): string => {
+            const formatted = formatNumber(value);
+            const showWarning = hasPossibleMissingDecimal(value) && (!isExactFive(value) || warnExactFive);
+            const warningButton = showWarning
+              ? `<button class="staff-data-warning-btn" type="button" data-warning-value="${escapeHtml(formatted)}" data-warning-possible-value="${escapeHtml(formatPossibleMissingDecimal(value))}" aria-label="Avís: possible decimal absent" title="Possible decimal absent">⚠️</button>`
+              : "";
+            return `<span class="specialty-number-cell"><span>${escapeHtml(formatted)}</span>${warningButton}</span>`;
+          };
+          const rows = specialties.rows.length
+            ? specialties.rows.map((item) => {
+                const warnExactFive = isExactFive(item.total_dot) && isExactFive(item.ocu_def);
+                return `<tr><td>${escapeHtml(asText(item.codi_lloc_desc) || "-")}</td>` +
+                  `<td>${renderSpecialtyNumber(item.total_dot, warnExactFive)}</td>` +
+                  `<td>${renderSpecialtyNumber(item.ocu_def, warnExactFive)}</td></tr>`;
+              }).join("")
+            : '<tr><td colspan="3">No hi ha dades d’especialitats per a aquest centre.</td></tr>';
+          context.body.innerHTML =
+            '<table class="teaching-staff-specialties-table inline-details-table">' +
+              '<thead><tr><th>Especialitat</th><th>Dotació</th><th>Ocupació definitiva</th></tr></thead>' +
+              `<tbody>${rows}</tbody>` +
+            '</table>';
+        } catch (error: any) {
+          if (!isInlineMapCurrent(context)) return;
+          context.description.textContent = `Error de connexió: ${error.message}`;
+          context.body.innerHTML = "";
+        }
+      };
+
+      const createInlineLeafletMap = async (context: InlineMapContext): Promise<{ leaflet: any; map: any } | null> => {
+        let leaflet: any;
+        try {
+          leaflet = await loadLeaflet();
+        } catch (error: any) {
+          showInlineMapError(context, error?.message || "No s'ha pogut carregar el mapa.");
+          return null;
+        }
+        if (!isInlineMapCurrent(context)) return null;
+
+        const map = leaflet.map(context.container, {
+          zoomControl: true,
+          scrollWheelZoom: true,
+        });
+        leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
+          attribution:
+            '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
+          maxZoom: 18,
+        }).addTo(map);
+        inlineMap = map;
+        return { leaflet, map };
+      };
+
+      const revealInlineMap = (context: InlineMapContext, updateViewport: () => void): void => {
+        if (!isInlineMapCurrent(context)) return;
+        context.status.classList.add("hidden");
+        context.container.classList.remove("hidden");
+        window.setTimeout(() => {
+          if (!isInlineMapCurrent(context) || !inlineMap) return;
+          inlineMap.invalidateSize();
+          updateViewport();
+        }, 300);
+      };
+
+      const toggleCentreInlineMap = async (
+        button: HTMLButtonElement,
+        xValue: string,
+        yValue: string,
+        centreName: string
+      ): Promise<void> => {
+        const x = Number(xValue);
+        const y = Number(yValue);
+        if (!Number.isFinite(x) || !Number.isFinite(y)) {
+          setMessage("Les coordenades no són vàlides.", true);
+          return;
+        }
+
+        const context = await prepareInlineMap(button, "Ubicació del centre", centreName);
+        if (!context) return;
+        const converted = utmToLatLon(31, x, y, true);
+        const lat = converted.lat;
+        const lon = converted.lon;
+        const mapContext = await createInlineLeafletMap(context);
+        if (!mapContext) return;
+        addCentreMarker(mapContext.leaflet, mapContext.map, centreName, xValue, yValue);
+
+        const mapLink = document.createElement("a");
+        mapLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
+        mapLink.target = "_blank";
+        mapLink.rel = "noopener noreferrer";
+        mapLink.textContent = "Obrir a OpenStreetMap";
+        context.meta.append(mapLink);
+        revealInlineMap(context, () => mapContext.map.setView([lat, lon], 15));
+      };
+
+      const togglePolygonInlineMap = async (
+        button: HTMLButtonElement,
         config: {
           name: string;
-          labelPrefix: string;
+          label: string;
           missingMessage: string;
-          noLeafletMessage: string;
-          backdrop: HTMLDivElement;
-          label: HTMLSpanElement;
-          container: HTMLDivElement;
-          state: PolygonMapState;
           loadFeatures: () => Promise<SocrataRow[]>;
           findFeature: (name: string, features: SocrataRow[]) => SocrataRow | null;
         },
@@ -1344,103 +1673,39 @@
         centreX: string,
         centreY: string
       ): Promise<void> => {
-        config.label.textContent = `${config.labelPrefix}: ${config.name}`;
-        config.backdrop.classList.remove("hidden");
+        const context = await prepareInlineMap(button, config.label, config.name);
+        if (!context) return;
+        const mapContext = await createInlineLeafletMap(context);
+        if (!mapContext) return;
 
-        const leaflet = (window as any).L;
-        if (!leaflet) {
-          setMessage(config.noLeafletMessage, true);
-          return;
+        try {
+          const selectedFeature = config.findFeature(config.name, await config.loadFeatures());
+          if (!isInlineMapCurrent(context)) return;
+          if (!selectedFeature) {
+            showInlineMapError(context, config.missingMessage);
+            return;
+          }
+
+          const polygonLayer = mapContext.leaflet
+            .geoJSON(selectedFeature as any, {
+              style: {
+                color: "#a8141a",
+                weight: 2,
+                opacity: 0.9,
+                fillColor: "#d8232a",
+                fillOpacity: 0.32,
+              },
+            })
+            .addTo(mapContext.map);
+          addCentreMarker(mapContext.leaflet, mapContext.map, centreName, centreX, centreY);
+          revealInlineMap(context, () => mapContext.map.fitBounds(polygonLayer.getBounds(), { padding: [20, 20] }));
+        } catch {
+          showInlineMapError(context, "No s'ha pogut carregar la informació del mapa.");
         }
-
-        const map = getOrCreateLeafletMap(config.state, config.container, leaflet);
-        const features = await config.loadFeatures();
-        clearPolygonMapState(config.state);
-
-        const selectedFeature = config.findFeature(config.name, features);
-        if (!selectedFeature) {
-          setMessage(config.missingMessage, true);
-          return;
-        }
-
-        const polygonLayer = leaflet
-          .geoJSON(selectedFeature as any, {
-            style: {
-              color: "#a8141a",
-              weight: 2,
-              opacity: 0.9,
-              fillColor: "#d8232a",
-              fillOpacity: 0.32,
-            },
-          })
-          .addTo(map);
-        config.state.layer = polygonLayer;
-        config.state.centreLayer = addCentreMarker(leaflet, map, centreName, centreX, centreY);
-
-        window.setTimeout(() => {
-          map.invalidateSize();
-          map.fitBounds(polygonLayer.getBounds(), { padding: [20, 20] });
-        }, 0);
       };
 
-      const openTerritorialMapModal = (territorialName: string, centreName: string, centreX: string, centreY: string): Promise<void> =>
-        openPolygonMapModal(
-          {
-            name: territorialName,
-            labelPrefix: "Àrea Territorial",
-            missingMessage: "No s'ha trobat el polígon del servei territorial.",
-            noLeafletMessage: "No s'ha pogut carregar el mapa territorial.",
-            backdrop: territorialMapModalBackdrop,
-            label: territorialNameLabel,
-            container: territorialMapContainer,
-            state: territorialMapState,
-            loadFeatures: loadTerritorialFeatures,
-            findFeature: findTerritorialFeature,
-          },
-          centreName,
-          centreX,
-          centreY
-        );
-
-      const openComarcaMapModal = (comarcaName: string, centreName: string, centreX: string, centreY: string): Promise<void> =>
-        openPolygonMapModal(
-          {
-            name: comarcaName,
-            labelPrefix: "Comarca",
-            missingMessage: "No s'ha trobat el polígon de la comarca.",
-            noLeafletMessage: "No s'ha pogut carregar el mapa de comarca.",
-            backdrop: comarcaMapModalBackdrop,
-            label: comarcaNameLabel,
-            container: comarcaMapContainer,
-            state: comarcaMapState,
-            loadFeatures: loadComarquesFeatures,
-            findFeature: findComarcaFeature,
-          },
-          centreName,
-          centreX,
-          centreY
-        );
-
-      const openMunicipiMapModal = (municipiName: string, centreName: string, centreX: string, centreY: string): Promise<void> =>
-        openPolygonMapModal(
-          {
-            name: municipiName,
-            labelPrefix: "Municipi",
-            missingMessage: "No s'ha trobat el polígon del municipi.",
-            noLeafletMessage: "No s'ha pogut carregar el mapa de municipi.",
-            backdrop: municipiMapModalBackdrop,
-            label: municipiNameLabel,
-            container: municipiMapContainer,
-            state: municipiMapState,
-            loadFeatures: loadMunicipisFeatures,
-            findFeature: findMunicipiFeature,
-          },
-          centreName,
-          centreX,
-          centreY
-        );
-
-      const openEducationalServiceMapModal = async (
+      const toggleEducationalServiceInlineMap = async (
+        button: HTMLButtonElement,
         service: EducationalService,
         centreMunicipality: string,
         centreDistrict: string,
@@ -1451,133 +1716,61 @@
         const districtName = service.district || centreDistrict;
         const useBarcelonaDistrict = normalizePlaceName(centreMunicipality) === "barcelona" && Boolean(districtName);
         const municipalitiesCount = service.municipalities?.length || 0;
-        educationalServiceNameLabel.textContent = useBarcelonaDistrict
+        const subtitle = useBarcelonaDistrict
           ? `${service.name} · ${districtName}`
           : `${service.name}${municipalitiesCount ? ` · ${municipalitiesCount} municipis` : ""}`;
-        educationalServiceMapModalBackdrop.classList.remove("hidden");
+        const context = await prepareInlineMap(button, "Servei educatiu", subtitle);
+        if (!context) return;
+        const mapContext = await createInlineLeafletMap(context);
+        if (!mapContext) return;
 
-        const leaflet = (window as any).L;
-        if (!leaflet) {
-          setMessage("No s'ha pogut carregar el mapa del servei educatiu.", true);
-          return;
+        try {
+          let selectedFeatures: SocrataRow[];
+          if (useBarcelonaDistrict) {
+            const districtFeature = findBarcelonaDistrictFeature(districtName, await loadBarcelonaDistrictFeatures());
+            selectedFeatures = districtFeature ? [districtFeature] : [];
+          } else {
+            selectedFeatures = findEducationalServiceMunicipiFeatures(service, await loadMunicipisFeatures());
+          }
+          if (!isInlineMapCurrent(context)) return;
+          if (!selectedFeatures.length) {
+            showInlineMapError(context, "No s'han trobat els polígons del servei educatiu.");
+            return;
+          }
+
+          const highlightedArea = useBarcelonaDistrict ? normalizeDistrictName(districtName) : normalizePlaceName(centreMunicipality);
+          const polygonLayer = mapContext.leaflet
+            .geoJSON(
+              { type: "FeatureCollection", features: selectedFeatures } as any,
+              {
+                style: (feature: any) => {
+                  const featureName = useBarcelonaDistrict ? getBarcelonaDistrictFeatureName(feature) : getMunicipiFeatureName(feature);
+                  const normalizedFeature = useBarcelonaDistrict ? normalizeDistrictName(featureName) : normalizePlaceName(featureName);
+                  const isCentreArea = normalizedFeature === highlightedArea;
+                  return {
+                    color: "#a8141a",
+                    weight: isCentreArea ? 3 : 1.5,
+                    opacity: 0.9,
+                    fillColor: "#d8232a",
+                    fillOpacity: isCentreArea ? 0.34 : 0.22,
+                  };
+                },
+                onEachFeature: (feature: any, layer: any) => {
+                  const name = useBarcelonaDistrict ? getBarcelonaDistrictFeatureName(feature) : getMunicipiFeatureName(feature);
+                  if (name) layer.bindTooltip(name, { sticky: true, opacity: 0.95 });
+                },
+              }
+            )
+            .addTo(mapContext.map);
+          addCentreMarker(mapContext.leaflet, mapContext.map, centreName, centreX, centreY);
+          revealInlineMap(context, () => mapContext.map.fitBounds(polygonLayer.getBounds(), { padding: [20, 20] }));
+        } catch {
+          showInlineMapError(context, "No s'ha pogut carregar la informació del servei educatiu.");
         }
-
-        const map = getOrCreateLeafletMap(educationalServiceMapState, educationalServiceMapContainer, leaflet);
-        clearPolygonMapState(educationalServiceMapState);
-
-        let selectedFeatures: SocrataRow[];
-        if (useBarcelonaDistrict) {
-          const districtFeature = findBarcelonaDistrictFeature(districtName, await loadBarcelonaDistrictFeatures());
-          selectedFeatures = districtFeature ? [districtFeature] : [];
-        } else {
-          selectedFeatures = findEducationalServiceMunicipiFeatures(service, await loadMunicipisFeatures());
-        }
-        if (!selectedFeatures.length) {
-          setMessage("No s'han trobat els polígons del servei educatiu.", true);
-          return;
-        }
-
-        const highlightedArea = useBarcelonaDistrict ? normalizeDistrictName(districtName) : normalizePlaceName(centreMunicipality);
-        const polygonLayer = leaflet
-          .geoJSON(
-            {
-              type: "FeatureCollection",
-              features: selectedFeatures,
-            } as any,
-            {
-              style: (feature: any) => {
-                const featureName = useBarcelonaDistrict ? getBarcelonaDistrictFeatureName(feature) : getMunicipiFeatureName(feature);
-                const isCentreArea = (useBarcelonaDistrict ? normalizeDistrictName(featureName) : normalizePlaceName(featureName)) === highlightedArea;
-                return {
-                  color: "#a8141a",
-                  weight: isCentreArea ? 3 : 1.5,
-                  opacity: 0.9,
-                  fillColor: "#d8232a",
-                  fillOpacity: isCentreArea ? 0.34 : 0.22,
-                };
-              },
-              onEachFeature: (feature: any, layer: any) => {
-                const name = useBarcelonaDistrict ? getBarcelonaDistrictFeatureName(feature) : getMunicipiFeatureName(feature);
-                if (name) layer.bindTooltip(name, { sticky: true, opacity: 0.95 });
-              },
-            }
-          )
-          .addTo(map);
-
-        educationalServiceMapState.layer = polygonLayer;
-        educationalServiceMapState.centreLayer = addCentreMarker(leaflet, map, centreName, centreX, centreY);
-
-        window.setTimeout(() => {
-          map.invalidateSize();
-          map.fitBounds(polygonLayer.getBounds(), { padding: [20, 20] });
-        }, 0);
-      };
-
-      const openMapModal = (xValue: string, yValue: string, centreName: string): void => {
-        const x = Number(xValue);
-        const y = Number(yValue);
-        if (!Number.isFinite(x) || !Number.isFinite(y)) {
-          setMessage("Les coordenades no són vàlides.", true);
-          return;
-        }
-
-        const converted = utmToLatLon(31, x, y, true);
-        const lat = converted.lat;
-        const lon = converted.lon;
-        const leaflet = (window as any).L;
-        if (!leaflet) {
-          setMessage("No s'ha pogut carregar el mapa.", true);
-          return;
-        }
-
-        if (!centreMap) {
-          centreMap = leaflet.map(mapLeafletContainer, {
-            zoomControl: true,
-            scrollWheelZoom: true,
-          });
-
-          leaflet.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", {
-            attribution:
-              '&copy; <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener noreferrer">OpenStreetMap contributors</a>',
-            maxZoom: 18,
-          }).addTo(centreMap);
-        }
-
-        if (centreMapLayer) {
-          centreMapLayer.remove();
-          centreMapLayer = null;
-        }
-
-        const markerLabel = (centreName || "Centre educatiu").trim() || "Centre educatiu";
-        const schoolIcon = leaflet.icon({
-          iconUrl: "assets/icona.png",
-          iconSize: [40, 60],
-          iconAnchor: [20, 59],
-          popupAnchor: [0, -50],
-          tooltipAnchor: [0, -50],
-        });
-
-        centreMapLayer = leaflet.layerGroup().addTo(centreMap);
-        leaflet
-          .marker([lat, lon], { icon: schoolIcon })
-          .bindTooltip(markerLabel, {
-            direction: "top",
-            offset: [0, -15],
-            opacity: 0.95,
-          })
-          .addTo(centreMapLayer);
-
-        openMapLink.href = `https://www.openstreetmap.org/?mlat=${lat}&mlon=${lon}#map=16/${lat}/${lon}`;
-        mapCoordsLabel.textContent = `X: ${xValue} | Y: ${yValue} | Lat: ${lat.toFixed(6)} | Lon: ${lon.toFixed(6)}`;
-        mapModalBackdrop.classList.remove("hidden");
-
-        window.setTimeout(() => {
-          centreMap.invalidateSize();
-          centreMap.setView([lat, lon], 15);
-        }, 0);
       };
 
       const renderData = async (data: any): Promise<void> => {
+        await closeInlineMap(true);
         const fields = { ...(data.fields || {}) };
         const rows: string[] = [];
         const studies: string[] = [];
@@ -1774,7 +1967,7 @@
             return (
               '<div class="match-row">' +
                 `<span><span class="match-name">${code} - ${name}</span> <span class="match-town">(${town})</span></span>` +
-                `<button class="match-view-btn fitxa-pick-btn" type="button" data-code="${code}">Tria</button>` +
+                `<button class="match-view-btn fitxa-pick-btn" type="button" data-code="${code}">${actionIcons.select}<span>Tria</span></button>` +
               "</div>"
             );
           })
@@ -1828,6 +2021,7 @@
               }
               await renderData(data);
               setMessage("");
+              scrollSearchIntoView();
               return;
             }
 
@@ -1843,11 +2037,13 @@
               const data = await attachEducationalService(rowToFitxaData(code, selected), selected);
               await renderData(data);
               setMessage("");
+              scrollSearchIntoView();
               return;
             }
 
             renderMatchChooser(matches);
             setMessage(`S'han trobat ${matches.length} centres. Tria'n un.`);
+            scrollSearchIntoView();
             return;
           }
 
@@ -1866,6 +2062,7 @@
           }
           await renderData(data);
           setMessage("");
+          scrollSearchIntoView();
         } catch (error: any) {
           setMessage(`Error de connexió: ${error.message}`, true);
         } finally {
@@ -1888,36 +2085,15 @@
       };
 
       loadButton.addEventListener("click", loadCentre);
-      infoButton.addEventListener("click", openInfoModal);
-      closeInfoModalButton.addEventListener("click", closeInfoModal);
-      closeMapModalButton.addEventListener("click", closeMapModal);
-      closeTerritorialMapModalButton.addEventListener("click", closeTerritorialMapModal);
-      closeComarcaMapModalButton.addEventListener("click", closeComarcaMapModal);
-      closeMunicipiMapModalButton.addEventListener("click", closeMunicipiMapModal);
-      closeEducationalServiceMapModalButton.addEventListener("click", closeEducationalServiceMapModal);
+      themeButton.addEventListener("click", () => {
+        const nextTheme: Theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+        applyTheme(nextTheme, true);
+      });
       closeCodesModalButton.addEventListener("click", closeCodesModal);
       closeEnrollmentModalButton.addEventListener("click", closeEnrollmentModal);
       closeTeachingStaffSpecialtiesModalButton.addEventListener("click", closeTeachingStaffSpecialtiesModal);
       closeStaffDataWarningModalButton.addEventListener("click", closeStaffDataWarningModal);
 
-      infoModalBackdrop.addEventListener("click", (event: MouseEvent) => {
-        if (event.target === infoModalBackdrop) closeInfoModal();
-      });
-      mapModalBackdrop.addEventListener("click", (event: MouseEvent) => {
-        if (event.target === mapModalBackdrop) closeMapModal();
-      });
-      territorialMapModalBackdrop.addEventListener("click", (event: MouseEvent) => {
-        if (event.target === territorialMapModalBackdrop) closeTerritorialMapModal();
-      });
-      comarcaMapModalBackdrop.addEventListener("click", (event: MouseEvent) => {
-        if (event.target === comarcaMapModalBackdrop) closeComarcaMapModal();
-      });
-      municipiMapModalBackdrop.addEventListener("click", (event: MouseEvent) => {
-        if (event.target === municipiMapModalBackdrop) closeMunicipiMapModal();
-      });
-      educationalServiceMapModalBackdrop.addEventListener("click", (event: MouseEvent) => {
-        if (event.target === educationalServiceMapModalBackdrop) closeEducationalServiceMapModal();
-      });
       codesModalBackdrop.addEventListener("click", (event: MouseEvent) => {
         if (event.target === codesModalBackdrop) closeCodesModal();
       });
@@ -1932,12 +2108,7 @@
       });
 
       document.addEventListener("keydown", (event: KeyboardEvent) => {
-        if (event.key === "Escape" && !infoModalBackdrop.classList.contains("hidden")) closeInfoModal();
-        if (event.key === "Escape" && !mapModalBackdrop.classList.contains("hidden")) closeMapModal();
-        if (event.key === "Escape" && !territorialMapModalBackdrop.classList.contains("hidden")) closeTerritorialMapModal();
-        if (event.key === "Escape" && !comarcaMapModalBackdrop.classList.contains("hidden")) closeComarcaMapModal();
-        if (event.key === "Escape" && !municipiMapModalBackdrop.classList.contains("hidden")) closeMunicipiMapModal();
-        if (event.key === "Escape" && !educationalServiceMapModalBackdrop.classList.contains("hidden")) closeEducationalServiceMapModal();
+        if (event.key === "Escape" && inlineMapRow) void closeInlineMap();
         if (event.key === "Escape" && !codesModalBackdrop.classList.contains("hidden")) closeCodesModal();
         if (event.key === "Escape" && !enrollmentModalBackdrop.classList.contains("hidden")) closeEnrollmentModal();
         if (event.key === "Escape" && !teachingStaffSpecialtiesModalBackdrop.classList.contains("hidden")) closeTeachingStaffSpecialtiesModal();
@@ -1954,21 +2125,27 @@
 
       resultBody.addEventListener("click", async (event: Event) => {
         const target = event.target as HTMLElement;
+        const warningButton = target.closest(".staff-data-warning-btn") as HTMLButtonElement | null;
+        if (warningButton) {
+          openStaffDataWarningModal(warningButton.dataset.warningValue || "", warningButton.dataset.warningPossibleValue || "");
+          return;
+        }
+
         const codesButton = target.closest(".codes-btn") as HTMLButtonElement | null;
         if (codesButton) {
-          openCodesModal();
+          await toggleCodesInline(codesButton);
           return;
         }
 
         const enrollmentButton = target.closest(".enrollment-btn") as HTMLButtonElement | null;
         if (enrollmentButton) {
-          await openEnrollmentModal();
+          await toggleEnrollmentInline(enrollmentButton);
           return;
         }
 
         const teachingStaffSpecialtiesButton = target.closest(".teaching-staff-specialties-btn") as HTMLButtonElement | null;
         if (teachingStaffSpecialtiesButton) {
-          await openTeachingStaffSpecialtiesModal();
+          await toggleTeachingStaffInline(teachingStaffSpecialtiesButton);
           return;
         }
 
@@ -1994,7 +2171,7 @@
           } catch {
             centreName = encodedName;
           }
-          openMapModal(mapButton.dataset.mapX || "", mapButton.dataset.mapY || "", centreName);
+          await toggleCentreInlineMap(mapButton, mapButton.dataset.mapX || "", mapButton.dataset.mapY || "", centreName);
           return;
         }
 
@@ -2002,8 +2179,15 @@
         if (territorialMapButton) {
           const territorialName = territorialMapButton.dataset.territorialName || "";
           if (!territorialName) return;
-          openTerritorialMapModal(
-            territorialName,
+          await togglePolygonInlineMap(
+            territorialMapButton,
+            {
+              name: territorialName,
+              label: "Àrea territorial",
+              missingMessage: "No s'ha trobat el polígon de l'àrea territorial.",
+              loadFeatures: loadTerritorialFeatures,
+              findFeature: findTerritorialFeature,
+            },
             territorialMapButton.dataset.centreName || "",
             territorialMapButton.dataset.centreX || "",
             territorialMapButton.dataset.centreY || ""
@@ -2014,8 +2198,15 @@
         if (comarcaMapButton) {
           const comarcaName = comarcaMapButton.dataset.comarcaName || "";
           if (!comarcaName) return;
-          openComarcaMapModal(
-            comarcaName,
+          await togglePolygonInlineMap(
+            comarcaMapButton,
+            {
+              name: comarcaName,
+              label: "Comarca",
+              missingMessage: "No s'ha trobat el polígon de la comarca.",
+              loadFeatures: loadComarquesFeatures,
+              findFeature: findComarcaFeature,
+            },
             comarcaMapButton.dataset.centreName || "",
             comarcaMapButton.dataset.centreX || "",
             comarcaMapButton.dataset.centreY || ""
@@ -2026,8 +2217,15 @@
         if (municipiMapButton) {
           const municipiName = municipiMapButton.dataset.municipiName || "";
           if (!municipiName) return;
-          openMunicipiMapModal(
-            municipiName,
+          await togglePolygonInlineMap(
+            municipiMapButton,
+            {
+              name: municipiName,
+              label: "Municipi",
+              missingMessage: "No s'ha trobat el polígon del municipi.",
+              loadFeatures: loadMunicipisFeatures,
+              findFeature: findMunicipiFeature,
+            },
             municipiMapButton.dataset.centreName || "",
             municipiMapButton.dataset.centreX || "",
             municipiMapButton.dataset.centreY || ""
@@ -2038,7 +2236,8 @@
         const educationalServiceMapButton = target.closest(".educational-service-map-btn") as HTMLButtonElement | null;
         if (educationalServiceMapButton) {
           if (!currentEducationalServiceForMap) return;
-          openEducationalServiceMapModal(
+          await toggleEducationalServiceInlineMap(
+            educationalServiceMapButton,
             currentEducationalServiceForMap,
             currentMunicipalityForMap,
             currentDistrictForMap,

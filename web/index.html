@@ -3,26 +3,71 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Consulta de Centres Educatius de Catalunya (Dades Obertes)</title>
-  <link
-    rel="stylesheet"
-    href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"
-    integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY="
-    crossorigin=""
+  <meta
+    name="description"
+    content="Consulta la informació oficial dels centres educatius de Catalunya per codi, nom o municipi a partir de dades obertes."
   />
-  <link rel="stylesheet" href="./css/fitxa-centre.css?v=20260617-resultats-alts" />
+  <title>Consulta de Centres Educatius de Catalunya (Dades Obertes)</title>
+  <script>
+    (() => {
+      try {
+        const savedTheme = localStorage.getItem("centres-theme");
+        const theme = savedTheme === "light" || savedTheme === "dark"
+          ? savedTheme
+          : "dark";
+        document.documentElement.dataset.theme = theme;
+        document.documentElement.style.colorScheme = theme;
+      } catch {
+        document.documentElement.dataset.theme = "dark";
+        document.documentElement.style.colorScheme = "dark";
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="./css/fitxa-centre.css?v=20260815-project-footer" />
 </head>
 <body>
   <main class="container">
-    <button id="infoButton" class="info-button" type="button" aria-label="Informació">i</button>
-    <h1>Consulta de Centres Educatius de Catalunya (Dades Obertes)</h1>
+    <header class="site-header">
+      <a class="brand" href="./" aria-label="Inici">
+        <span class="brand-mark" aria-hidden="true"></span>
+        <span>Centres educatius</span>
+      </a>
+      <div class="header-actions">
+        <button id="themeButton" class="theme-button" type="button" aria-label="Activa el tema fosc" title="Activa el tema fosc">
+          <svg class="theme-icon theme-icon-sun" viewBox="0 0 24 24" aria-hidden="true">
+            <circle cx="12" cy="12" r="3.5" />
+            <path d="M12 2v2M12 20v2M4.93 4.93l1.42 1.42M17.65 17.65l1.42 1.42M2 12h2M20 12h2M4.93 19.07l1.42-1.42M17.65 6.35l1.42-1.42" />
+          </svg>
+          <svg class="theme-icon theme-icon-moon" viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M20.1 15.2A8.5 8.5 0 0 1 8.8 3.9 8.5 8.5 0 1 0 20.1 15.2Z" />
+          </svg>
+        </button>
+      </div>
+    </header>
 
     <section id="sectionFitxa">
-      <p>Introdueix el codi de centre, el nom del centre o el municipi per carregar tota la informació disponible de la fitxa oficial.</p>
+      <div class="hero">
+        <p class="eyebrow"><span aria-hidden="true"></span>Dades obertes de Catalunya</p>
+        <h1>Troba la informació dels <span>centres educatius</span></h1>
+        <p class="hero-description">Cerca per codi, nom o municipi i consulta en un sol lloc la informació disponible de la fitxa oficial.</p>
+      </div>
 
       <div class="controls">
-        <input id="code" type="text" placeholder="Codi, nom del centre o municipi" autocomplete="off" />
-        <button id="load">Carregar centre</button>
+        <label class="search-field" for="code">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="m21 21-4.35-4.35m2.35-5.65a8 8 0 1 1-16 0 8 8 0 0 1 16 0Z" />
+          </svg>
+          <input id="code" type="text" placeholder="Codi, nom del centre o municipi" autocomplete="off" />
+        </label>
+        <button id="load">
+          <span class="search-action-icon-slot search-action-icon-leading" aria-hidden="true">
+            <svg class="action-button-icon" viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"></circle><path d="m20 20-4-4"></path></svg>
+          </span>
+          <span>Cerca</span>
+          <span class="search-action-icon-slot search-action-icon-trailing" aria-hidden="true">
+            <svg class="action-button-icon" viewBox="0 0 24 24"><path d="M5 12h14"></path><path d="m13 6 6 6-6 6"></path></svg>
+          </span>
+        </button>
       </div>
 
       <div id="message" class="message"></div>
@@ -36,87 +81,31 @@
       </table>
     </section>
 
-    <div id="mapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="mapModalTitle">
-      <div class="modal">
-        <div class="modal-header">
-          <span id="mapModalTitle">Ubicació del centre</span>
-          <button id="closeMapModal" type="button">Tancar</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-actions">
-            <a id="openMapLink" href="#" target="_blank" rel="noopener noreferrer">Obrir a OpenStreetMap</a>
-            <span id="mapCoordsLabel" class="meta"></span>
-          </div>
-          <div id="mapLeaflet" class="modal-map" aria-label="Mapa del centre"></div>
+    <footer class="site-footer">
+      <div class="footer-brand">
+        <span class="footer-mark" aria-hidden="true"></span>
+        <div class="footer-brand-copy">
+          <strong>Centres educatius</strong>
+          <span>· Rafa Barrachina · 2026</span>
         </div>
       </div>
-    </div>
-
-    <div id="territorialMapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="territorialMapModalTitle">
-      <div class="modal">
-        <div class="modal-header">
-          <span id="territorialMapModalTitle">Mapa del servei territorial</span>
-          <button id="closeTerritorialMapModal" type="button">Tancar</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-actions">
-            <span id="territorialNameLabel" class="meta"></span>
-          </div>
-          <div id="territorialMap" class="modal-map"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="comarcaMapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="comarcaMapModalTitle">
-      <div class="modal">
-        <div class="modal-header">
-          <span id="comarcaMapModalTitle">Mapa de la comarca</span>
-          <button id="closeComarcaMapModal" type="button">Tancar</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-actions">
-            <span id="comarcaNameLabel" class="meta"></span>
-          </div>
-          <div id="comarcaMap" class="modal-map"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="municipiMapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="municipiMapModalTitle">
-      <div class="modal">
-        <div class="modal-header">
-          <span id="municipiMapModalTitle">Mapa del municipi</span>
-          <button id="closeMunicipiMapModal" type="button">Tancar</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-actions">
-            <span id="municipiNameLabel" class="meta"></span>
-          </div>
-          <div id="municipiMap" class="modal-map"></div>
-        </div>
-      </div>
-    </div>
-
-    <div id="educationalServiceMapModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="educationalServiceMapModalTitle">
-      <div class="modal">
-        <div class="modal-header">
-          <span id="educationalServiceMapModalTitle">Mapa del servei educatiu</span>
-          <button id="closeEducationalServiceMapModal" type="button">Tancar</button>
-        </div>
-        <div class="modal-body">
-          <div class="modal-actions">
-            <span id="educationalServiceNameLabel" class="meta"></span>
-          </div>
-          <div id="educationalServiceMap" class="modal-map"></div>
-        </div>
-      </div>
-    </div>
+      <nav class="footer-links" aria-label="Informació del projecte">
+        <a href="https://github.com/rbarrachina/fitxa-centres-educatius" target="_blank" rel="noopener noreferrer">
+          <svg viewBox="0 0 24 24" aria-hidden="true">
+            <path d="M12 2a10 10 0 0 0-3.162 19.49c.5.092.683-.217.683-.482 0-.238-.009-.868-.014-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.108-1.462-1.108-1.462-.907-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.53 2.341 1.088 2.91.833.091-.646.35-1.088.636-1.338-2.221-.253-4.555-1.11-4.555-4.944 0-1.092.39-1.985 1.03-2.685-.103-.254-.447-1.274.097-2.655 0 0 .84-.269 2.75 1.025a9.57 9.57 0 0 1 5.005 0c1.909-1.294 2.748-1.025 2.748-1.025.545 1.381.201 2.401.099 2.655.641.7 1.029 1.593 1.029 2.685 0 3.842-2.338 4.687-4.566 4.935.359.31.679.922.679 1.858 0 1.341-.012 2.422-.012 2.752 0 .268.18.579.688.481A10.002 10.002 0 0 0 12 2Z" />
+          </svg>
+          <span>Codi font</span>
+        </a>
+        <a href="https://www.gnu.org/licenses/agpl-3.0.html" target="_blank" rel="license noopener noreferrer">Llicència AGPL v3+</a>
+        <a href="https://github.com/rbarrachina/fitxa-centres-educatius#llic%C3%A8ncies-i-atribuci%C3%B3-de-tercers" target="_blank" rel="noopener noreferrer">Crèdits de tercers</a>
+      </nav>
+    </footer>
 
     <div id="codesModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="codesModalTitle">
       <div class="modal codes-modal">
         <div class="modal-header">
           <span id="codesModalTitle">Codis</span>
-          <button id="closeCodesModal" type="button">Tancar</button>
+          <button id="closeCodesModal" type="button"><svg class="action-button-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><span>Tancar</span></button>
         </div>
         <div class="modal-body">
           <table class="codes-table">
@@ -130,7 +119,7 @@
       <div class="modal enrollment-modal">
         <div class="modal-header">
           <span id="enrollmentModalTitle">Matrícula d'alumnes</span>
-          <button id="closeEnrollmentModal" type="button">Tancar</button>
+          <button id="closeEnrollmentModal" type="button"><svg class="action-button-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><span>Tancar</span></button>
         </div>
         <div class="modal-body">
           <p id="enrollmentDescription" class="enrollment-description"></p>
@@ -153,7 +142,7 @@
       <div class="modal teaching-staff-specialties-modal">
         <div class="modal-header">
           <span id="teachingStaffSpecialtiesModalTitle">Especialitats del personal docent</span>
-          <button id="closeTeachingStaffSpecialtiesModal" type="button">Tancar</button>
+          <button id="closeTeachingStaffSpecialtiesModal" type="button"><svg class="action-button-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><span>Tancar</span></button>
         </div>
         <div class="modal-body">
           <p id="teachingStaffSpecialtiesDescription" class="enrollment-description"></p>
@@ -175,7 +164,7 @@
       <div class="modal staff-data-warning-modal">
         <div class="modal-header">
           <span id="staffDataWarningModalTitle">Avís sobre la dada</span>
-          <button id="closeStaffDataWarningModal" type="button">Tancar</button>
+          <button id="closeStaffDataWarningModal" type="button"><svg class="action-button-icon" aria-hidden="true" viewBox="0 0 24 24"><path d="M18 6 6 18"></path><path d="m6 6 12 12"></path></svg><span>Tancar</span></button>
         </div>
         <div class="modal-body">
           <p id="staffDataWarningText"></p>
@@ -183,83 +172,12 @@
       </div>
     </div>
 
-    <div id="infoModalBackdrop" class="modal-backdrop hidden" role="dialog" aria-modal="true" aria-labelledby="infoModalTitle">
-      <div class="modal info-modal">
-        <div class="modal-header">
-          <span id="infoModalTitle">Informació de l'aplicació</span>
-          <button id="closeInfoModal" type="button">Tancar</button>
-        </div>
-        <div class="modal-body info-modal-body">
-          <div class="info-card">
-            <p class="info-line info-line-author">
-              <span class="info-label">Autor:</span>
-              <span class="info-value"> Rafa Barrachina</span>
-              <a
-                class="github-inline-link"
-                href="https://github.com/rbarrachina/fitxa-centres-educatius"
-                target="_blank"
-                rel="noopener noreferrer"
-                aria-label="Repositori a GitHub"
-                title="Repositori a GitHub"
-              >
-                <svg viewBox="0 0 24 24" role="img" aria-hidden="true">
-                  <path d="M12 2a10 10 0 0 0-3.162 19.49c.5.092.683-.217.683-.482 0-.238-.009-.868-.014-1.703-2.782.604-3.369-1.341-3.369-1.341-.454-1.154-1.108-1.462-1.108-1.462-.907-.62.069-.608.069-.608 1.003.07 1.531 1.031 1.531 1.031.892 1.53 2.341 1.088 2.91.833.091-.646.35-1.088.636-1.338-2.221-.253-4.555-1.11-4.555-4.944 0-1.092.39-1.985 1.03-2.685-.103-.254-.447-1.274.097-2.655 0 0 .84-.269 2.75 1.025a9.57 9.57 0 0 1 5.005 0c1.909-1.294 2.748-1.025 2.748-1.025.545 1.381.201 2.401.099 2.655.641.7 1.029 1.593 1.029 2.685 0 3.842-2.338 4.687-4.566 4.935.359.31.679.922.679 1.858 0 1.341-.012 2.422-.012 2.752 0 .268.18.579.688.481A10.002 10.002 0 0 0 12 2Z"/>
-                </svg>
-              </a>
-            </p>
-          </div>
-          <div class="info-card info-card-license">
-            <p class="info-line">
-              <span class="info-label">Llicència:</span>
-              <span class="info-value"> AGPL v3+</span>
-            </p>
-            <a
-              class="license-link"
-              href="https://www.gnu.org/licenses/agpl-3.0.html"
-              target="_blank"
-              rel="noopener noreferrer"
-              aria-label="Llicència GNU Affero General Public License v3"
-              title="Llicència GNU Affero General Public License v3"
-            >
-              <img
-                src="https://www.gnu.org/graphics/agplv3-with-text-162x68.png"
-                alt="GNU AGPLv3"
-                width="162"
-                height="68"
-              />
-            </a>
-          </div>
-          <div class="info-card">
-            <p class="info-line">
-              <span class="info-label">Tercers:</span>
-              <a
-                class="info-action-link"
-                href="https://github.com/rbarrachina/fitxa-centres-educatius#llic%C3%A8ncies-i-atribuci%C3%B3-de-tercers"
-                target="_blank"
-                rel="noopener noreferrer"
-              >consulta el README</a>
-            </p>
-          </div>
-          <div class="info-card">
-            <p class="info-line">
-              <span class="info-label">Any:</span>
-              <span class="info-value"> 2026</span>
-            </p>
-          </div>
-        </div>
-      </div>
-    </div>
   </main>
 
   <script>
     // Per GitHub Pages, posa aquí el backend públic (ex: https://fitxa-centres-educatius-api.onrender.com)
     window.MAPES_API_BASE = "";
   </script>
-  <script
-    src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"
-    integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo="
-    crossorigin=""
-  ></script>
-  <script src="./js/fitxa-centre.js?v=20260519-url-codi"></script>
+  <script src="./js/fitxa-centre.js?v=20260815-lazy-leaflet"></script>
 </body>
 </html>
