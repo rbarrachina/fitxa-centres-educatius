@@ -379,24 +379,8 @@ h1 span {
   text-align: center;
 }
 
-.eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 9px;
-  margin: 0;
-  color: var(--accent-dark);
-  font-size: 0.78rem;
-  font-weight: 750;
-  letter-spacing: 0.09em;
-  text-transform: uppercase;
-}
-
-.eyebrow span {
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: #55b879;
-  box-shadow: 0 0 0 5px rgba(85, 184, 121, 0.12);
+.hero h1 {
+  margin-top: 0;
 }
 
 .hero-description {
@@ -405,6 +389,23 @@ h1 span {
   color: var(--muted);
   font-size: clamp(1rem, 2vw, 1.18rem);
   line-height: 1.6;
+}
+
+.data-source {
+  margin: 10px 0 0;
+  font-size: 0.78rem;
+  font-weight: 650;
+}
+
+.data-source a {
+  color: var(--accent-dark);
+  text-decoration: none;
+}
+
+.data-source a:hover {
+  color: var(--accent);
+  text-decoration: underline;
+  text-underline-offset: 3px;
 }
 
 p {
