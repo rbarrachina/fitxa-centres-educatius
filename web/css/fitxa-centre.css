@@ -426,7 +426,7 @@ p {
   display: flex;
   width: min(760px, 100%);
   gap: 10px;
-  margin: 0 auto 18px;
+  margin: 0 auto 26px;
   padding: 7px;
   border: 1px solid rgba(31, 101, 64, 0.14);
   border-radius: 18px;
@@ -615,7 +615,7 @@ table {
 th,
 td {
   text-align: left;
-  padding: 10px;
+  padding: 11px 10px;
   border-bottom: 1px solid var(--border);
   vertical-align: top;
 }
