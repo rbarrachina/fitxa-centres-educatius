@@ -1,0 +1,4 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://fitxa-centres.vercel.app/sitemap.xml
