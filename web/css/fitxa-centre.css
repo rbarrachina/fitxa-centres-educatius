@@ -426,7 +426,7 @@ p {
   display: flex;
   width: min(760px, 100%);
   gap: 10px;
-  margin: 0 auto 26px;
+  margin: 0 auto 34px;
   padding: 7px;
   border: 1px solid rgba(31, 101, 64, 0.14);
   border-radius: 18px;
