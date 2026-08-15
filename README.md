@@ -117,6 +117,16 @@ També es pot obrir directament una fitxa concreta afegint el paràmetre `codi` 
 - Mode backend opcional (FastAPI): `npm run backend`
 - Si es vol forçar ús de backend des del frontend estàtic, definir `window.MAPES_API_BASE` a `web/index.html`.
 
+## Desplegament a Vercel
+
+El fitxer `vercel.json` configura Vercel perquè:
+
+- executi `npm run build` a cada desplegament;
+- publiqui la carpeta estàtica `web`;
+- generi automàticament un nou desplegament quan la integració de GitHub detecti canvis al repositori.
+
+La branca de producció és `main`. Les altres branques poden generar desplegaments de previsualització des de Vercel.
+
 ## Desenvolupament
 
 - Qualsevol canvi a `src/fitxa-centre.ts` requereix recompilar:
