@@ -22,6 +22,7 @@
   --button-soft-bg: #edf7ef;
   --button-soft-border: #bfdcc7;
   --button-soft-text: #245f3c;
+  --scroll-fade-bg: #e5f3e9;
   --action-button-height: 28px;
   --danger: #b44a4a;
   --border: #cfe2d4;
@@ -44,6 +45,7 @@ html[data-theme="dark"] {
   --button-soft-bg: #193b29;
   --button-soft-border: #315c41;
   --button-soft-text: #c9ead4;
+  --scroll-fade-bg: #0d2a1b;
   --danger: #ff9292;
   --border: #294635;
   --shadow: rgba(0, 0, 0, 0.26);
@@ -391,6 +393,133 @@ h1 span {
   line-height: 1.6;
 }
 
+.centre-page #sectionFitxa {
+  padding-top: clamp(52px, 8vw, 88px);
+}
+
+.search-results-page #sectionFitxa {
+  padding-top: 30px;
+}
+
+.search-results-page .hero {
+  display: none;
+}
+
+:is(.centre-page, .search-results-page)::before {
+  position: fixed;
+  z-index: 14;
+  top: 0;
+  right: 0;
+  left: 0;
+  height: 118px;
+  content: "";
+  pointer-events: none;
+  background: linear-gradient(
+    to bottom,
+    var(--scroll-fade-bg) 0,
+    var(--scroll-fade-bg) 54px,
+    color-mix(in srgb, var(--scroll-fade-bg) 82%, transparent) 76px,
+    color-mix(in srgb, var(--scroll-fade-bg) 38%, transparent) 98px,
+    transparent 100%
+  );
+}
+
+:is(.centre-page, .search-results-page) .site-header {
+  position: sticky;
+  top: 10px;
+  z-index: 15;
+}
+
+.centre-header-search {
+  width: min(410px, 46vw);
+  min-width: 340px;
+  margin-right: auto;
+  margin-left: 24px;
+}
+
+.centre-page .centre-hero {
+  min-width: 0;
+  padding: 0;
+  text-align: left;
+}
+
+.centre-page .centre-hero h1 {
+  max-width: 100%;
+  margin: 0 0 9px;
+  font-size: clamp(2.15rem, 4.4vw, 3.8rem);
+  line-height: 1.04;
+}
+
+.centre-kicker {
+  margin: 0;
+  color: var(--accent);
+  font-size: 0.78rem;
+  font-weight: 760;
+  letter-spacing: 0.075em;
+  line-height: 1.4;
+  text-transform: uppercase;
+}
+
+.centre-page .centre-hero .hero-description {
+  max-width: none;
+  margin: 0;
+  color: var(--accent);
+  font-size: clamp(1.5rem, 2.6vw, 1.85rem);
+  font-weight: 680;
+}
+
+:is(.centre-page, .search-results-page) .controls {
+  position: static;
+  width: 100%;
+  gap: 4px;
+  margin: 0;
+  padding: 3px;
+  border-radius: 14px;
+  box-shadow: 0 10px 30px rgba(24, 48, 38, 0.07);
+}
+
+:is(.centre-page, .search-results-page) .controls input {
+  padding-block: 7px;
+  font-size: 0.9rem;
+}
+
+:is(.centre-page, .search-results-page) .controls #load {
+  min-width: 104px;
+  padding: 7px 14px;
+  font-size: 0.88rem;
+}
+
+.centre-page #resultTable {
+  margin-top: 30px;
+}
+
+.route-error {
+  width: min(720px, 100%);
+  padding: clamp(90px, 15vh, 160px) 0;
+}
+
+.route-error h1 {
+  margin: 10px 0 18px;
+  font-size: clamp(2.4rem, 7vw, 4.8rem);
+}
+
+.route-error p:not(.centre-kicker) {
+  max-width: 620px;
+  font-size: 1.05rem;
+  line-height: 1.6;
+}
+
+.route-error-link {
+  display: inline-flex;
+  margin-top: 12px;
+  padding: 11px 17px;
+  border: 1px solid var(--button-soft-border);
+  border-radius: 999px;
+  background: var(--button-soft-bg);
+  color: var(--button-soft-text);
+  text-decoration: none;
+}
+
 p {
   margin: 0 0 16px;
   color: var(--muted);
@@ -571,6 +700,12 @@ button:disabled {
 
 .message.error {
   color: var(--danger);
+}
+
+.search-results-page .message {
+  width: 100%;
+  margin-right: 0;
+  margin-left: 0;
 }
 
 .meta {
@@ -889,6 +1024,10 @@ html[data-theme="dark"] .inline-map-row:hover > td {
   background: var(--panel-strong);
 }
 
+.inline-map-canvas path.leaflet-interactive:focus:not(:focus-visible) {
+  outline: none;
+}
+
 .call-btn {
   display: inline-flex;
   align-items: center;
@@ -1090,6 +1229,12 @@ tr:last-child th {
   color: #fff;
   border: 1px solid transparent;
   box-shadow: none;
+  text-decoration: none;
+}
+
+.match-view-btn:visited,
+.match-view-btn:active {
+  color: #fff;
 }
 
 .match-view-btn .select-arrow-icon {
@@ -1345,6 +1490,52 @@ html[data-theme="dark"] a:hover {
   .hero-description {
     font-size: 1rem;
     line-height: 1.5;
+  }
+
+  .centre-page #sectionFitxa {
+    padding-top: 40px;
+  }
+
+  .search-results-page #sectionFitxa {
+    padding-top: 24px;
+  }
+
+  :is(.centre-page, .search-results-page) .site-header {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 14px 10px;
+  }
+
+  :is(.centre-page, .search-results-page) .centre-header-search {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    width: min(100%, 410px);
+    min-width: 0;
+    margin: 0;
+  }
+
+  :is(.centre-page, .search-results-page) .header-actions {
+    grid-column: 2;
+    grid-row: 1;
+  }
+
+  :is(.centre-page, .search-results-page) .controls {
+    flex-direction: row;
+  }
+
+  :is(.centre-page, .search-results-page) .controls .search-field {
+    min-height: 42px;
+  }
+
+  :is(.centre-page, .search-results-page) .controls #load {
+    width: auto;
+    min-width: 98px;
+    min-height: 42px;
+  }
+
+  .centre-page .centre-hero h1 {
+    margin-top: 8px;
+    font-size: clamp(2.15rem, 11vw, 3.45rem);
   }
 
   .controls {

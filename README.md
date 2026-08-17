@@ -5,8 +5,11 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 ## Funcionalitats
 
 - Cerca per codi de centre (8 dígits), nom del centre o municipi.
-- Càrrega directa d'una fitxa passant el codi de centre a la URL amb `?codi=XXXXXXXX`.
+- Pàgina pròpia per a cada centre amb URL estable basada només en el codi: `/centre/XXXXXXXX/`.
+- L'antic paràmetre `?codi=XXXXXXXX` redirigeix a la nova URL de la fitxa.
 - Selecció de centre quan hi ha múltiples coincidències.
+- Quan una cerca només té una coincidència, s'obre directament la pàgina pròpia del centre.
+- Quan l'usuari torna enrere des d'una fitxa, es recuperen la consulta i els resultats anteriors.
 - Fitxa amb camps principals (nom, naturalesa, titularitat, adreça, municipi, etc.).
 - Botons d'acció (copiar, web, telèfon amb enllaç `tel:`, veure mapa).
 - Fila `Codis` amb botó `Veure codis` per desplegar sota la fila un acordió amb els codis administratius.
@@ -47,6 +50,8 @@ La interfície utilitza un disseny minimalista i integrat a tota la finestra del
 - El botó `Cerca` s'inspira en la interacció `Download for Mac` d'Amicro: mostra una lupa abans del text en repòs i, en hover, la substitueix suaument per una fletxa després del text.
 - El color del botó `Cerca` utilitza un verd profund amb un degradat i una ombra continguts, adaptats específicament als temes clar i fosc perquè destaqui sense desentonar amb la resta de superfícies.
 - En desplaçar-se pels resultats o per una fitxa llarga, el cercador queda fixat temporalment a la part superior de la finestra per mantenir disponible una nova consulta.
+- A les pàgines de centre, el nom del centre és el títol principal i el cercador adopta una disposició compacta dins de la capçalera, al costat de la marca; en mòbil ocupa una segona línia de la mateixa capçalera.
+- Una cerca amb diverses coincidències feta des d'una fitxa torna a la vista normal de resultats de la portada.
 - Les coincidències no tenen un desplaçament intern independent: tots els resultats formen part del desplaçament general de la pàgina.
 - En iniciar una cerca vàlida, la pàgina es desplaça automàticament fins al context del cercador i els resultats; el moviment és suau excepte quan el sistema indica que cal reduir les animacions.
 - El titular i la resta de la portada queden per sobre del viewport després de la cerca i tornen a aparèixer quan l'usuari es desplaça cap amunt.
@@ -78,6 +83,17 @@ Els canvis de presentació es concentren principalment en:
 - Pàgina: `web/index.html`.
 - Entrada d'arrel per desenvolupament local: `index.html`, que redirigeix a `web/`.
 
+### Pàgines de centre a Vercel
+
+- Funció: `api/centre.mjs`.
+- Ruta pública: `/centre/:code/`.
+- La funció consulta el dataset de centres en cada visita i retorna una resposta HTML que ja conté el nom, les metadades i les dades principals del centre.
+- La resposta utilitza `Cache-Control: no-store`; no es conserva una còpia fixa de la fitxa.
+- El JavaScript completa després les accions, els mapes, la matrícula i les especialitats docents mantenint la mateixa taula i el mateix disseny de la cerca actual.
+- Un codi inexistent retorna `404`; una incidència temporal de Dades Obertes retorna `503`.
+- `api/sitemap.mjs` genera el `sitemap.xml` amb la portada i tots els codis del curs actual. El sitemap es pot conservar temporalment a la CDN durant una hora, però les pàgines de centre continuen consultant les dades en directe.
+- No hi ha cap directori o catàleg alternatiu: el cercador continua sent l'única navegació visible pels centres.
+
 ### Backend (opcional)
 
 Existeix backend FastAPI opcional a `backend/` per mode servidor, però el flux principal actual és frontend estàtic.
@@ -107,9 +123,9 @@ npm run serve
 
 `http://127.0.0.1:8000/`
 
-També es pot obrir directament una fitxa concreta afegint el paràmetre `codi` amb el codi de centre de 8 dígits:
+En el desplegament de Vercel, es pot obrir directament una fitxa concreta amb el codi de centre de 8 dígits:
 
-`http://127.0.0.1:8000/?codi=08012345`
+`https://fitxa-centres.vercel.app/centre/08012345/`
 
 ## Modes d'execució
 
@@ -123,6 +139,8 @@ El fitxer `vercel.json` configura Vercel perquè:
 
 - executi `npm run build` a cada desplegament;
 - publiqui la carpeta estàtica `web`;
+- reescrigui `/centre/:code/` cap a la funció que genera l'HTML de la fitxa;
+- serveixi un sitemap dinàmic amb totes les fitxes del curs actual;
 - generi automàticament un nou desplegament quan la integració de GitHub detecti canvis al repositori.
 
 La branca de producció és `main`. Les altres branques poden generar desplegaments de previsualització des de Vercel.
@@ -133,6 +151,12 @@ La branca de producció és `main`. Les altres branques poden generar desplegame
 
 ```bash
 npm run build
+```
+
+- Executar les proves de les pàgines generades i del sitemap:
+
+```bash
+npm test
 ```
 
 - Script disponible en watch:

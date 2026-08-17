@@ -1,5 +1,24 @@
 {
   "$schema": "https://openapi.vercel.sh/vercel.json",
   "buildCommand": "npm run build",
-  "outputDirectory": "web"
+  "outputDirectory": "web",
+  "functions": {
+    "api/centre.mjs": {
+      "includeFiles": "web/**"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/sitemap.xml",
+      "destination": "/api/sitemap"
+    },
+    {
+      "source": "/centre/:code",
+      "destination": "/api/centre"
+    },
+    {
+      "source": "/centre/:code/",
+      "destination": "/api/centre"
+    }
+  ]
 }

@@ -1,7 +1,10 @@
 (() => {
-    const apiBase = String(window.MAPES_API_BASE || "")
+    const appWindow = window;
+    const apiBase = String(appWindow.MAPES_API_BASE || "")
         .trim()
         .replace(/\/+$/, "");
+    const isCentrePage = Boolean(appWindow.__CENTRE_PAGE__);
+    const initialCentreRow = appWindow.__INITIAL_CENTRE_ROW__ || null;
     const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
     const SOCRATA_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/d/kvmv-ahh4";
     const MATRICULA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/xvme-26kg.json";
@@ -11,10 +14,10 @@
     const TEACHING_STAFF_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/Educaci-/Personal-docent-en-centres-p-blics-titularitat-del/2ip7-jdgh/about_data";
     const TEACHING_STAFF_SPECIALTIES_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/4fid-p2hv.json";
     const TEACHING_STAFF_SPECIALTIES_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/Educaci-/Plantilles-del-personal-docent-dels-centres-p-blic/4fid-p2hv";
-    const EDUCATIONAL_SERVICES_URL = "data/serveis-educatius.json";
-    const TERRITORIAL_SERVICES_URL = "data/serveis-territorials-simplificat.geojson";
+    const EDUCATIONAL_SERVICES_URL = "/data/serveis-educatius.json";
+    const TERRITORIAL_SERVICES_URL = "/data/serveis-territorials-simplificat.geojson";
     const COMARQUES_URL = "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson";
-    const MUNICIPIS_URL = "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query?where=1%3D1&outFields=NOM_MUNI&outSR=4326&f=geojson";
+    const MUNICIPIS_QUERY_URL = "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query";
     const BARCELONA_DISTRICTS_URL = "https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download";
     const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
     const LEAFLET_JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
@@ -848,6 +851,9 @@
     const init = () => {
         const codeInput = byId("code");
         const loadButton = byId("load");
+        const searchControls = codeInput.closest(".controls");
+        const siteHeader = document.querySelector(".site-header");
+        const headerActions = siteHeader?.querySelector(".header-actions") || null;
         const messageEl = byId("message");
         const fitxaMatchesWrap = byId("fitxaMatchesWrap");
         const fitxaMatches = byId("fitxaMatches");
@@ -875,7 +881,8 @@
         let inlineMapSequence = 0;
         let territorialFeaturesPromise = null;
         let comarquesFeaturesPromise = null;
-        let municipisFeaturesPromise = null;
+        const municipisFeatureCache = new Map();
+        const municipisRequestCache = new Map();
         let currentCentreForTerritorial = null;
         let currentMunicipalityForMap = "";
         let currentDistrictForMap = "";
@@ -903,7 +910,28 @@
         };
         const initialTheme = document.documentElement.dataset.theme === "dark" ? "dark" : "light";
         applyTheme(initialTheme);
+        const enterHomepageSearchMode = () => {
+            if (isCentrePage || document.body.classList.contains("search-results-page"))
+                return;
+            document.body.classList.add("search-results-page");
+            if (!searchControls || !siteHeader)
+                return;
+            const searchContainer = document.createElement("div");
+            searchContainer.className = "centre-header-search homepage-header-search";
+            searchContainer.setAttribute("aria-label", "Cerca de centres");
+            searchContainer.append(searchControls);
+            siteHeader.insertBefore(searchContainer, headerActions);
+        };
         const scrollSearchIntoView = () => {
+            if (isCentrePage)
+                return;
+            if (document.body.classList.contains("search-results-page")) {
+                window.requestAnimationFrame(() => {
+                    const prefersReducedMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+                    window.scrollTo({ top: 0, behavior: prefersReducedMotion ? "auto" : "smooth" });
+                });
+                return;
+            }
             const searchContext = document.querySelector(".hero-description");
             if (!searchContext)
                 return;
@@ -1206,18 +1234,81 @@
             }
             return null;
         };
-        const loadMunicipisFeatures = async () => {
-            if (municipisFeaturesPromise)
-                return municipisFeaturesPromise;
-            municipisFeaturesPromise = fetch(MUNICIPIS_URL)
-                .then((response) => {
+        const getMunicipiQueryVariants = (value) => {
+            const name = asText(value).replaceAll(/\s+/g, " ");
+            if (!name)
+                return [];
+            const variants = new Set([name]);
+            const icgcAliases = {
+                rapita: ["Sant Carles de la Ràpita"],
+            };
+            (icgcAliases[normalizePlaceName(name)] || []).forEach((alias) => variants.add(alias));
+            const trailingArticle = name.match(/^(.+?),\s*(l['’]?|el|la|els|les)$/i);
+            if (trailingArticle) {
+                const article = trailingArticle[2].toLocaleLowerCase("ca-ES");
+                const usesApostrophe = article === "l'" || article === "l’";
+                variants.add(usesApostrophe ? `${article}${trailingArticle[1]}` : `${article} ${trailingArticle[1]}`);
+            }
+            const leadingApostrophe = name.match(/^l['’](.+)$/i);
+            if (leadingApostrophe) {
+                variants.add(`l'${leadingApostrophe[1]}`);
+                variants.add(`${leadingApostrophe[1]}, l'`);
+            }
+            const leadingArticle = name.match(/^(el|la|els|les)\s+(.+)$/i);
+            if (leadingArticle) {
+                const article = leadingArticle[1].toLocaleLowerCase("ca-ES");
+                variants.add(`${article} ${leadingArticle[2]}`);
+                variants.add(`${leadingArticle[2]}, ${article}`);
+            }
+            return Array.from(variants);
+        };
+        const escapeArcGisSql = (value) => value.replaceAll("'", "''");
+        const fetchMunicipisFeatureBatch = async (names) => {
+            const queryNames = Array.from(new Set(names.flatMap(getMunicipiQueryVariants))).sort((a, b) => a.localeCompare(b, "ca"));
+            if (!queryNames.length)
+                return [];
+            const requestKey = queryNames.map(normalizePlaceName).join("|");
+            const cachedRequest = municipisRequestCache.get(requestKey);
+            if (cachedRequest)
+                return cachedRequest;
+            const request = (async () => {
+                const params = new URLSearchParams({
+                    where: `NOM_MUNI IN (${queryNames.map((name) => `'${escapeArcGisSql(name)}'`).join(",")})`,
+                    outFields: "NOM_MUNI",
+                    outSR: "4326",
+                    f: "geojson",
+                });
+                const response = await fetch(`${MUNICIPIS_QUERY_URL}?${params}`);
                 if (!response.ok)
                     throw new Error("No s'ha pogut carregar el mapa de municipis.");
-                return response.json();
-            })
-                .then((geojson) => (Array.isArray(geojson?.features) ? geojson.features : []))
-                .catch(() => []);
-            return municipisFeaturesPromise;
+                const geojson = await response.json();
+                const features = Array.isArray(geojson?.features) ? geojson.features : [];
+                features.forEach((feature) => {
+                    const key = normalizePlaceName(getMunicipiFeatureName(feature));
+                    if (key)
+                        municipisFeatureCache.set(key, feature);
+                });
+                names.forEach((requestedName) => {
+                    const variantKeys = new Set(getMunicipiQueryVariants(requestedName).map(normalizePlaceName));
+                    const matchingFeature = features.find((feature) => variantKeys.has(normalizePlaceName(getMunicipiFeatureName(feature))));
+                    if (matchingFeature)
+                        municipisFeatureCache.set(normalizePlaceName(requestedName), matchingFeature);
+                });
+                return features;
+            })().catch(() => []);
+            municipisRequestCache.set(requestKey, request);
+            return request;
+        };
+        const loadMunicipisFeatures = async (names) => {
+            const requestedKeys = Array.from(new Set(names.map(normalizePlaceName).filter(Boolean)));
+            const missingNames = names.filter((name) => !municipisFeatureCache.has(normalizePlaceName(name)));
+            const batchSize = 18;
+            for (let index = 0; index < missingNames.length; index += batchSize) {
+                await fetchMunicipisFeatureBatch(missingNames.slice(index, index + batchSize));
+            }
+            return requestedKeys
+                .map((key) => municipisFeatureCache.get(key))
+                .filter(Boolean);
         };
         const loadBarcelonaDistrictFeatures = async () => {
             if (barcelonaDistrictsFeaturesPromise)
@@ -1647,7 +1738,7 @@
                     selectedFeatures = districtFeature ? [districtFeature] : [];
                 }
                 else {
-                    selectedFeatures = findEducationalServiceMunicipiFeatures(service, await loadMunicipisFeatures());
+                    selectedFeatures = findEducationalServiceMunicipiFeatures(service, await loadMunicipisFeatures(service.municipalities || []));
                 }
                 if (!isInlineMapCurrent(context))
                     return;
@@ -1887,10 +1978,29 @@
                 const town = escapeHtml(asText(row.nom_municipi) || "-");
                 return ('<div class="match-row">' +
                     `<span><span class="match-name">${code} - ${name}</span> <span class="match-town">(${town})</span></span>` +
-                    `<button class="match-view-btn fitxa-pick-btn" type="button" data-code="${code}">${actionIcons.select}<span>Tria</span></button>` +
+                    `<a class="match-view-btn fitxa-pick-btn" href="/centre/${encodeURIComponent(code)}/" data-code="${code}">${actionIcons.select}<span>Tria</span></a>` +
                     "</div>");
             })
                 .join("");
+        };
+        const centreUrl = (code) => `/centre/${encodeURIComponent(code)}/`;
+        const navigateToCentre = (code) => {
+            window.location.assign(centreUrl(code));
+        };
+        const navigateToHomepageWithoutResults = (query) => {
+            const url = new URL("/", window.location.origin);
+            url.searchParams.set("cerca", query);
+            url.searchParams.set("resultat", "cap");
+            window.location.assign(`${url.pathname}${url.search}`);
+        };
+        const rememberHomepageSearch = (query) => {
+            if (isCentrePage)
+                return;
+            const url = new URL(window.location.href);
+            url.pathname = "/";
+            url.search = "";
+            url.searchParams.set("cerca", query);
+            window.history.replaceState({ centreSearchQuery: query, restoreSearch: true }, "", `${url.pathname}${url.search}`);
         };
         const fetchFitxaFromSocrata = async (code) => {
             const whereClause = `codi_centre = '${escapeSoql(code)}'`;
@@ -1908,7 +2018,7 @@
             });
             return sortRowsByNameRelevance(filtered, text);
         };
-        const loadCentre = async () => {
+        const loadCentre = async (options = {}) => {
             const query = codeInput.value.trim();
             setMessage("Carregant dades...");
             hideMatchChooser();
@@ -1918,6 +2028,9 @@
                 setMessage("Has d'indicar el codi, el nom del centre o el municipi.", true);
                 return;
             }
+            enterHomepageSearchMode();
+            if (!options.restorePreviousSearch)
+                rememberHomepageSearch(query);
             const isCodeSearch = /^\d{8}$/.test(query);
             loadButton.disabled = true;
             try {
@@ -1927,28 +2040,50 @@
                 }
                 if (!apiBase) {
                     if (isCodeSearch) {
-                        const data = await fetchFitxaFromSocrata(query);
-                        if (data.status !== "ok") {
-                            setMessage(data.message || "No s'ha pogut carregar el centre.", true);
+                        if (options.restorePreviousSearch) {
+                            const rows = await fetchSocrataRows(`codi_centre = '${escapeSoql(query)}'`, 5);
+                            const selected = pickBestRow(rows);
+                            if (!selected) {
+                                setMessage("No s'ha trobat cap centre amb aquest codi.", true);
+                                return;
+                            }
+                            renderMatchChooser([selected]);
+                            setMessage("Cerca anterior: s'ha trobat 1 centre.");
+                            scrollSearchIntoView();
                             return;
                         }
-                        await renderData(data);
-                        setMessage("");
-                        scrollSearchIntoView();
+                        if (isCentrePage) {
+                            const rows = await fetchSocrataRows(`codi_centre = '${escapeSoql(query)}'`, 5);
+                            const selected = pickBestRow(rows);
+                            if (!selected) {
+                                navigateToHomepageWithoutResults(query);
+                                return;
+                            }
+                        }
+                        navigateToCentre(query);
                         return;
                     }
                     const matches = await searchFitxaByTextFromSocrata(query);
                     if (!matches.length) {
+                        if (isCentrePage) {
+                            navigateToHomepageWithoutResults(query);
+                            return;
+                        }
                         setMessage("No s'ha trobat cap centre amb aquest nom o municipi.", true);
                         return;
                     }
                     if (matches.length === 1) {
-                        const selected = matches[0];
-                        const code = asText(selected.codi_centre);
-                        const data = await attachEducationalService(rowToFitxaData(code, selected), selected);
-                        await renderData(data);
-                        setMessage("");
-                        scrollSearchIntoView();
+                        if (options.restorePreviousSearch) {
+                            renderMatchChooser(matches);
+                            setMessage("Cerca anterior: s'ha trobat 1 centre.");
+                            scrollSearchIntoView();
+                            return;
+                        }
+                        navigateToCentre(asText(matches[0].codi_centre));
+                        return;
+                    }
+                    if (isCentrePage) {
+                        window.location.assign(`/?cerca=${encodeURIComponent(query)}`);
                         return;
                     }
                     renderMatchChooser(matches);
@@ -1982,6 +2117,33 @@
             }
         };
         const loadCentreFromUrl = () => {
+            if (isCentrePage && initialCentreRow) {
+                const code = asText(initialCentreRow.codi_centre);
+                void attachEducationalService(rowToFitxaData(code, initialCentreRow), initialCentreRow)
+                    .then(renderData)
+                    .then(() => setMessage(""))
+                    .catch((error) => setMessage(`Error de connexió: ${error.message}`, true));
+                return;
+            }
+            const searchParams = new URLSearchParams(window.location.search);
+            const searchQuery = searchParams.get("cerca");
+            if (searchQuery !== null) {
+                const query = searchQuery.trim();
+                if (!query)
+                    return;
+                codeInput.value = query;
+                if (!isCentrePage && searchParams.get("resultat") === "cap") {
+                    enterHomepageSearchMode();
+                    setMessage("No s'ha trobat cap centre amb aquest codi, nom o municipi.", true);
+                    return;
+                }
+                const restorePreviousSearch = Boolean(window.history.state?.restoreSearch);
+                if (restorePreviousSearch) {
+                    window.history.replaceState({ ...window.history.state, restoreSearch: false }, "", `${window.location.pathname}${window.location.search}`);
+                }
+                void loadCentre({ restorePreviousSearch });
+                return;
+            }
             const urlCode = new URLSearchParams(window.location.search).get("codi");
             if (urlCode === null)
                 return;
@@ -1991,9 +2153,9 @@
                 setMessage("El paràmetre de URL 'codi' ha de tenir 8 dígits.", true);
                 return;
             }
-            void loadCentre();
+            navigateToCentre(code);
         };
-        loadButton.addEventListener("click", loadCentre);
+        loadButton.addEventListener("click", () => void loadCentre());
         themeButton.addEventListener("click", () => {
             const nextTheme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
             applyTheme(nextTheme, true);
@@ -2123,7 +2285,7 @@
                     name: municipiName,
                     label: "Municipi",
                     missingMessage: "No s'ha trobat el polígon del municipi.",
-                    loadFeatures: loadMunicipisFeatures,
+                    loadFeatures: () => loadMunicipisFeatures([municipiName]),
                     findFeature: findMunicipiFeature,
                 }, municipiMapButton.dataset.centreName || "", municipiMapButton.dataset.centreX || "", municipiMapButton.dataset.centreY || "");
                 return;
@@ -2157,38 +2319,18 @@
                 return;
             window.open(openUrl, "_blank", "noopener,noreferrer");
         });
-        fitxaMatches.addEventListener("click", async (event) => {
-            const target = event.target;
-            const pickButton = target.closest(".fitxa-pick-btn");
-            if (!pickButton)
-                return;
-            const selectedCode = asText(pickButton.dataset.code);
-            if (!selectedCode)
-                return;
-            setMessage("Carregant centre seleccionat...");
-            hideMatchChooser();
-            resultTable.classList.add("hidden");
-            metaEl.classList.add("hidden");
-            loadButton.disabled = true;
-            try {
-                const data = await fetchFitxaFromSocrata(selectedCode);
-                if (data.status !== "ok") {
-                    setMessage("No s'ha pogut carregar el centre seleccionat.", true);
-                    return;
-                }
-                await renderData(data);
-                setMessage("");
-            }
-            catch (error) {
-                setMessage(`Error de connexió: ${error.message}`, true);
-            }
-            finally {
-                loadButton.disabled = false;
-            }
-        });
         codeInput.addEventListener("keydown", (event) => {
             if (event.key === "Enter")
                 loadCentre();
+        });
+        window.addEventListener("pageshow", (event) => {
+            if (isCentrePage || !event.persisted)
+                return;
+            const previousQuery = asText(window.history.state?.centreSearchQuery).trim();
+            if (!previousQuery)
+                return;
+            codeInput.value = previousQuery;
+            void loadCentre({ restorePreviousSearch: true });
         });
         codeInput.value = "";
         loadCentreFromUrl();
