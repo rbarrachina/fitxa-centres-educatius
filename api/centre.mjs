@@ -172,7 +172,7 @@ function renderCentrePage(row) {
 function renderErrorPage(status, title, message) {
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message);
-  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${safeTitle} | Fitxa centres educatius</title><link rel="stylesheet" href="/css/fitxa-centre.css"></head><body><main class="container"><header class="site-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Fitxa centres educatius</span></a></header><section class="route-error"><p class="centre-kicker">Error ${status}</p><h1>${safeTitle}</h1><p>${safeMessage}</p><a class="route-error-link" href="/">Torna al cercador</a></section>${siteFooterHtml()}</main></body></html>`;
+  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${safeTitle} | Fitxa centres educatius</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/fitxa-centre.css"></head><body><main class="container"><header class="site-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Fitxa centres educatius</span></a></header><section class="route-error"><p class="centre-kicker">Error ${status}</p><h1>${safeTitle}</h1><p>${safeMessage}</p><a class="route-error-link" href="/">Torna al cercador</a></section>${siteFooterHtml()}</main></body></html>`;
 }
 
 export default {

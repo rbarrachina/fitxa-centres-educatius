@@ -48,6 +48,7 @@ test("la pàgina de centre canònica retorna HTML complet, metadades i breadcrum
     assert.match(response.headers.get("content-type"), /text\/html/);
     assert.equal(response.headers.get("cache-control"), "no-store");
     assert.match(html, /<h1>Institut XXV Olimpíada<\/h1>/);
+    assert.match(html, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml" \/>/);
     assert.match(html, /<p class="hero-description">Barcelona<\/p>/);
     assert.doesNotMatch(html, /Fitxa del centre educatiu · Barcelona/);
     assert.match(html, /<link rel="canonical" href="https:\/\/fitxa-centres\.vercel\.app\/centre\/08047431-institut-xxv-olimpiada-barcelona\/" \/>/);
@@ -157,6 +158,7 @@ test("el directori genera pàgines d’àrea i municipi amb enllaços rastrejabl
     const areaHtml = await areaResponse.text();
     assert.equal(areaResponse.status, 200);
     assert.match(areaHtml, /<h1>Consorci d&#039;Educació de Barcelona<\/h1>/);
+    assert.match(areaHtml, /<link rel="icon" href="\/favicon\.svg" type="image\/svg\+xml" \/>/);
     assert.match(areaHtml, /<p>1 municipi · 2 centres educatius<\/p>/);
     assert.match(areaHtml, /content="Consorci d&#039;Educació de Barcelona: consulta 2 centres educatius en 1 municipi, amb informació i accés a les fitxes dels centres\."/);
     assert.doesNotMatch(areaHtml, /Aquesta àrea territorial agrupa/);

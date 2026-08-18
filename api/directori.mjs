@@ -57,6 +57,7 @@ function pageShell({ title, description, canonicalPath, breadcrumbs, content, st
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
   <meta name="description" content="${escapeHtml(description)}" />
   <link rel="canonical" href="${escapeHtml(canonicalUrl)}" />
   <meta property="og:type" content="website" />
@@ -224,7 +225,7 @@ export function renderMunicipality(centres, area, municipality) {
 }
 
 function errorPage(status, title, message) {
-  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><link rel="stylesheet" href="/css/fitxa-centre.css"></head><body><main class="container"><section class="route-error"><p>Error ${status}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="/centres/">Explora els centres</a></section>${siteFooterHtml()}</main></body></html>`;
+  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/fitxa-centre.css"></head><body><main class="container"><section class="route-error"><p>Error ${status}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="/centres/">Explora els centres</a></section>${siteFooterHtml()}</main></body></html>`;
 }
 
 export default {
