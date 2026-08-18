@@ -5,7 +5,9 @@ import { centrePath, escapeHtml, escapeSoql, scriptJson, siteFooterHtml, slugify
 const SITE_URL = "https://fitxa-centres.vercel.app";
 const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
 const template = readFileSync(join(process.cwd(), "web", "index.html"), "utf8");
-const searchControls = template.match(/<div class="controls">[\s\S]*?<\/div>(?=\s*<div id="message")/)?.[0] || "";
+const searchControls = template.match(
+  /<div class="controls">[\s\S]*?<\/div>(?=\s*(?:<nav class="home-explore-links"[\s\S]*?<\/nav>\s*)?<div id="message")/,
+)?.[0] || "";
 
 const STUDY_KEYS = [
   "einf1c", "einf2c", "epri", "eso", "batx", "aa01", "cfpm", "ppas", "aa03", "cfps",

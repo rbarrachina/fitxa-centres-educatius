@@ -52,6 +52,8 @@ test("la pàgina de centre canònica retorna HTML complet, metadades i breadcrum
     assert.match(html, /<link rel="canonical" href="https:\/\/fitxa-centres\.vercel\.app\/centre\/08047431-institut-xxv-olimpiada-barcelona\/" \/>/);
     assert.match(html, /<meta name="description" content="Institut XXV Olimpíada \(Barcelona\): consulta el contacte, la ubicació, els estudis, la matrícula i les especialitats docents del centre\." \/>/);
     assert.match(html, /class="breadcrumbs"/);
+    assert.match(html, /<div class="centre-header-search"[^>]*>[\s\S]*?<div class="controls">/);
+    assert.doesNotMatch(html, /<div class="centre-header-search"[^>]*><\/div>/);
     assert.match(html, /"@type":"BreadcrumbList"/);
     assert.match(html, /<th>Codi centre<\/th><td>08047431<\/td>/);
     assert.match(html, /window\.__INITIAL_CENTRE_ROW__/);
@@ -191,7 +193,7 @@ test("la portada incorpora l’exploració per àrea territorial", async () => {
     const response = await homeFunction.fetch();
     const html = await response.text();
     assert.equal(response.status, 200);
-  assert.match(html, /<nav class="home-explore-links"[^>]*>[\s\S]*?<a href="\/centres\/">Explora per àrea territorial<\/a>[\s\S]*?<a href="\/municipis\/">Explora per municipi<\/a>[\s\S]*?<\/nav>/);
+    assert.match(html, /<nav class="home-explore-links"[^>]*>[\s\S]*?<a href="\/centres\/">Explora per àrea territorial<\/a>[\s\S]*?<a href="\/municipis\/">Explora per municipi<\/a>[\s\S]*?<\/nav>/);
     assert.doesNotMatch(html, /Explora els centres educatius<\/h2>/);
     assert.doesNotMatch(html, /12 àrees territorials|735 municipis/);
     assert.match(html, /Cerca centres educatius de Catalunya per nom, codi o municipi, o explora’ls per àrea territorial i accedeix a totes les fitxes\./);
