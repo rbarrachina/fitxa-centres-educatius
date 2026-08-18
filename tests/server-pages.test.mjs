@@ -194,12 +194,12 @@ test("la portada incorpora l’exploració per àrea territorial", async () => {
     const response = await homeFunction.fetch();
     const html = await response.text();
     assert.equal(response.status, 200);
-    assert.match(html, /<nav class="home-explore-links"[^>]*>[\s\S]*?<a href="\/centres\/">Explora per àrea territorial<\/a>[\s\S]*?<a href="\/municipis\/">Explora per municipi<\/a>[\s\S]*?<\/nav>/);
+    assert.match(html, /<nav class="home-explore-links"[^>]*>[\s\S]*?<a href="https:\/\/fitxa-centres\.vercel\.app\/centres\/">Explora per àrea territorial<\/a>[\s\S]*?<a href="https:\/\/fitxa-centres\.vercel\.app\/municipis\/">Explora per municipi<\/a>[\s\S]*?<\/nav>/);
     assert.doesNotMatch(html, /Explora els centres educatius<\/h2>/);
     assert.doesNotMatch(html, /12 àrees territorials|735 municipis/);
     assert.match(html, /Cerca centres educatius de Catalunya per nom, codi o municipi, o explora’ls per àrea territorial i accedeix a totes les fitxes\./);
-    assert.match(html, /href="\/centres\/"/);
-    assert.match(html, /href="\/municipis\/"/);
+    assert.match(html, /href="https:\/\/fitxa-centres\.vercel\.app\/centres\/"/);
+    assert.match(html, /href="https:\/\/fitxa-centres\.vercel\.app\/municipis\/"/);
     assert.doesNotMatch(html, /href="\/centres\/consorci-d-educacio-de-barcelona\/"/);
   } finally {
     globalThis.fetch = originalFetch;
