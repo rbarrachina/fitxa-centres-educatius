@@ -241,6 +241,14 @@
             .trim()
             .toLowerCase();
     }
+    function slugify(value) {
+        return String(value || "")
+            .normalize("NFD")
+            .replace(/[\u0300-\u036f]/g, "")
+            .toLocaleLowerCase("ca")
+            .replace(/[^a-z0-9]+/g, "-")
+            .replace(/^-+|-+$/g, "");
+    }
     function normalizePlaceName(value) {
         const normalized = normalizeText(value)
             .replaceAll(/[’']/g, " ")
@@ -1969,23 +1977,40 @@
             fitxaMatchesWrap.classList.add("hidden");
             fitxaMatches.innerHTML = "";
         };
-        const renderMatchChooser = (rows) => {
+        const renderMatchChooser = (rows, directoryMatches = []) => {
             fitxaMatchesWrap.classList.remove("hidden");
-            fitxaMatches.innerHTML = rows
+            const directoryHtml = directoryMatches
+                .map((match) => {
+                const name = escapeHtml(match.name);
+                const context = escapeHtml(match.context);
+                const href = escapeHtml(match.url);
+                return ('<div class="match-row directory-match-row">' +
+                    `<span><span class="match-name">${name}</span> <span class="match-town">(${context})</span></span>` +
+                    `<a class="match-view-btn fitxa-pick-btn" href="${href}">${actionIcons.select}<span>Explora</span></a>` +
+                    "</div>");
+            })
+                .join("");
+            const centreHtml = rows
                 .map((row) => {
                 const code = escapeHtml(asText(row.codi_centre) || "-");
                 const name = escapeHtml(asText(row.denominaci_completa) || "-");
                 const town = escapeHtml(asText(row.nom_municipi) || "-");
+                const href = escapeHtml(centreUrl(row));
                 return ('<div class="match-row">' +
                     `<span><span class="match-name">${code} - ${name}</span> <span class="match-town">(${town})</span></span>` +
-                    `<a class="match-view-btn fitxa-pick-btn" href="/centre/${encodeURIComponent(code)}/" data-code="${code}">${actionIcons.select}<span>Tria</span></a>` +
+                    `<a class="match-view-btn fitxa-pick-btn" href="${href}" data-code="${code}">${actionIcons.select}<span>Tria</span></a>` +
                     "</div>");
             })
                 .join("");
+            fitxaMatches.innerHTML = directoryHtml + centreHtml;
         };
-        const centreUrl = (code) => `/centre/${encodeURIComponent(code)}/`;
-        const navigateToCentre = (code) => {
-            window.location.assign(centreUrl(code));
+        const centreUrl = (row) => {
+            const code = asText(row.codi_centre).trim();
+            const descriptive = slugify(`${asText(row.denominaci_completa)}-${asText(row.nom_municipi)}`);
+            return `/centre/${encodeURIComponent(descriptive ? `${code}-${descriptive}` : code)}/`;
+        };
+        const navigateToCentre = (row) => {
+            window.location.assign(centreUrl(row));
         };
         const navigateToHomepageWithoutResults = (query) => {
             const url = new URL("/", window.location.origin);
@@ -2018,6 +2043,45 @@
             });
             return sortRowsByNameRelevance(filtered, text);
         };
+        const searchDirectoryByText = async (text) => {
+            const allRows = dedupeByCode(await getCurrentCourseRows());
+            const needle = normalizePlaceName(text);
+            if (!needle)
+                return [];
+            const areas = new Map();
+            const municipalities = new Map();
+            allRows.forEach((row) => {
+                const area = asText(row.nom_delegaci);
+                const municipality = asText(row.nom_municipi);
+                if (area)
+                    areas.set(normalizePlaceName(area), area);
+                if (area && municipality) {
+                    const municipalityCode = asText(row.codi_municipi);
+                    municipalities.set(municipalityCode || `${normalizePlaceName(area)}\u0000${normalizePlaceName(municipality)}`, { name: municipality, area });
+                }
+            });
+            const matches = [];
+            areas.forEach((area, normalizedArea) => {
+                if (!normalizedArea.includes(needle))
+                    return;
+                const relevance = normalizedArea === needle ? 0 : normalizedArea.startsWith(needle) ? 1 : 2;
+                matches.push({ kind: "area", name: area, context: "Àrea territorial", url: `/centres/${slugify(area)}/`, relevance });
+            });
+            municipalities.forEach((municipality) => {
+                const normalizedMunicipality = normalizePlaceName(municipality.name);
+                if (!normalizedMunicipality.includes(needle))
+                    return;
+                const relevance = normalizedMunicipality === needle ? 0 : normalizedMunicipality.startsWith(needle) ? 1 : 2;
+                matches.push({
+                    kind: "municipality",
+                    name: municipality.name,
+                    context: municipality.area,
+                    url: `/centres/${slugify(municipality.area)}/${slugify(municipality.name)}/`,
+                    relevance,
+                });
+            });
+            return matches.sort((a, b) => a.relevance - b.relevance || a.kind.localeCompare(b.kind) || a.name.localeCompare(b.name, "ca"));
+        };
         const loadCentre = async (options = {}) => {
             const query = codeInput.value.trim();
             setMessage("Carregant dades...");
@@ -2040,36 +2104,45 @@
                 }
                 if (!apiBase) {
                     if (isCodeSearch) {
-                        if (options.restorePreviousSearch) {
-                            const rows = await fetchSocrataRows(`codi_centre = '${escapeSoql(query)}'`, 5);
-                            const selected = pickBestRow(rows);
-                            if (!selected) {
+                        const rows = await fetchSocrataRows(`codi_centre = '${escapeSoql(query)}'`, 5);
+                        const selected = pickBestRow(rows);
+                        if (!selected) {
+                            if (isCentrePage)
+                                navigateToHomepageWithoutResults(query);
+                            else
                                 setMessage("No s'ha trobat cap centre amb aquest codi.", true);
-                                return;
-                            }
+                            return;
+                        }
+                        if (options.restorePreviousSearch) {
                             renderMatchChooser([selected]);
                             setMessage("Cerca anterior: s'ha trobat 1 centre.");
                             scrollSearchIntoView();
                             return;
                         }
-                        if (isCentrePage) {
-                            const rows = await fetchSocrataRows(`codi_centre = '${escapeSoql(query)}'`, 5);
-                            const selected = pickBestRow(rows);
-                            if (!selected) {
-                                navigateToHomepageWithoutResults(query);
-                                return;
-                            }
-                        }
-                        navigateToCentre(query);
+                        navigateToCentre(selected);
                         return;
                     }
-                    const matches = await searchFitxaByTextFromSocrata(query);
-                    if (!matches.length) {
+                    const [directoryMatches, matches] = await Promise.all([
+                        searchDirectoryByText(query),
+                        searchFitxaByTextFromSocrata(query),
+                    ]);
+                    const totalMatches = directoryMatches.length + matches.length;
+                    if (!totalMatches) {
                         if (isCentrePage) {
                             navigateToHomepageWithoutResults(query);
                             return;
                         }
                         setMessage("No s'ha trobat cap centre amb aquest nom o municipi.", true);
+                        return;
+                    }
+                    if (directoryMatches.length) {
+                        if (isCentrePage) {
+                            window.location.assign(`/?cerca=${encodeURIComponent(query)}`);
+                            return;
+                        }
+                        renderMatchChooser(matches, directoryMatches);
+                        setMessage(totalMatches === 1 ? "S'ha trobat 1 resultat." : `S'han trobat ${totalMatches} resultats. Tria'n un.`);
+                        scrollSearchIntoView();
                         return;
                     }
                     if (matches.length === 1) {
@@ -2079,7 +2152,7 @@
                             scrollSearchIntoView();
                             return;
                         }
-                        navigateToCentre(asText(matches[0].codi_centre));
+                        navigateToCentre(matches[0]);
                         return;
                     }
                     if (isCentrePage) {
@@ -2153,7 +2226,7 @@
                 setMessage("El paràmetre de URL 'codi' ha de tenir 8 dígits.", true);
                 return;
             }
-            navigateToCentre(code);
+            void loadCentre();
         };
         loadButton.addEventListener("click", () => void loadCentre());
         themeButton.addEventListener("click", () => {

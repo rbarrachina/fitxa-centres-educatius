@@ -1,5 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
+import { centrePath, escapeHtml, escapeSoql, scriptJson, siteFooterHtml, slugify } from "./seo-utils.mjs";
 
 const SITE_URL = "https://fitxa-centres.vercel.app";
 const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
@@ -11,23 +12,6 @@ const STUDY_KEYS = [
   "ee", "ife", "pfi", "pa01", "cfam", "pa02", "cfas", "esdi", "escm", "escs", "adr",
   "crbc", "idi", "dane", "danp", "dans", "muse", "musp", "muss", "tegm", "tegs", "estr", "adults",
 ];
-
-function escapeHtml(value) {
-  return String(value ?? "")
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#039;");
-}
-
-function escapeSoql(value) {
-  return String(value ?? "").replaceAll("'", "''");
-}
-
-function scriptJson(value) {
-  return JSON.stringify(value).replaceAll("<", "\\u003c");
-}
 
 function isStudyActive(value) {
   const raw = String(value ?? "").trim().toLocaleLowerCase("ca");
@@ -104,10 +88,9 @@ async function fetchCurrentCentre(code) {
 
 function replaceMeta(html, row, canonicalUrl) {
   const name = text(row, "denominaci_completa", "Centre educatiu");
-  const code = text(row, "codi_centre", "");
   const municipality = text(row, "nom_municipi", "Catalunya");
-  const description = `Consulta la fitxa de ${name}, centre educatiu de ${municipality}: contacte, ubicació, estudis, matrícula i especialitats docents.`;
-  const title = `${name} (${code}) | Fitxa centres educatius`;
+  const description = `${name} (${municipality}): consulta el contacte, la ubicació, els estudis, la matrícula i les especialitats docents del centre.`;
+  const title = `${name} de ${municipality} | Fitxa centres educatius`;
 
   return html
     .replace(/<meta\s+name="description"\s+content="[\s\S]*?"\s*\/>/, `<meta name="description" content="${escapeHtml(description)}" />`)
@@ -125,12 +108,26 @@ function renderCentrePage(row) {
   const code = text(row, "codi_centre", "");
   const name = text(row, "denominaci_completa", "Centre educatiu");
   const municipality = text(row, "nom_municipi", "Catalunya");
-  const canonicalUrl = `${SITE_URL}/centre/${encodeURIComponent(code)}/`;
+  const area = text(row, "nom_delegaci", "Catalunya");
+  const canonicalUrl = `${SITE_URL}${centrePath(row)}`;
+  const areaUrl = `/centres/${slugify(area)}/`;
+  const municipalityUrl = `${areaUrl}${slugify(municipality)}/`;
   const centreHero = `
       <div class="hero centre-hero">
         <h1>${escapeHtml(name)}</h1>
         <p class="hero-description">${escapeHtml(municipality)}</p>
       </div>`;
+  const breadcrumbData = {
+    "@context": "https://schema.org",
+    "@type": "BreadcrumbList",
+    itemListElement: [
+      { "@type": "ListItem", position: 1, name: "Catalunya", item: `${SITE_URL}/centres/` },
+      { "@type": "ListItem", position: 2, name: area, item: `${SITE_URL}${areaUrl}` },
+      { "@type": "ListItem", position: 3, name: municipality, item: `${SITE_URL}${municipalityUrl}` },
+      { "@type": "ListItem", position: 4, name },
+    ],
+  };
+  const breadcrumbs = `<nav class="breadcrumbs" aria-label="Fil d’Ariadna"><a href="/centres/">Catalunya</a><span aria-hidden="true">›</span><a href="${escapeHtml(areaUrl)}">${escapeHtml(area)}</a><span aria-hidden="true">›</span><a href="${escapeHtml(municipalityUrl)}">${escapeHtml(municipality)}</a><span aria-hidden="true">›</span><span aria-current="page">${escapeHtml(name)}</span></nav>`;
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
@@ -152,6 +149,7 @@ function renderCentrePage(row) {
   let html = replaceMeta(template, row, canonicalUrl)
     .replace("<head>", '<head>\n  <base href="/" />')
     .replace("<body>", '<body class="centre-page">')
+    .replace("    <section id=\"sectionFitxa\">", `    ${breadcrumbs}\n\n    <section id="sectionFitxa">`)
     .replace(/\s*<div class="hero">[\s\S]*?<\/div>\s*(?=<div class="controls">)/, `\n${centreHero}\n\n      `)
     .replace(searchControls, "")
     .replace(
@@ -162,7 +160,7 @@ function renderCentrePage(row) {
     .replace('<tbody id="resultBody"></tbody>', `<tbody id="resultBody">${initialRows(row)}</tbody>`)
     .replace(
       "  <script>\n    // Per GitHub Pages",
-      `  <script type="application/ld+json">${scriptJson(structuredData)}</script>\n  <script>\n    window.__CENTRE_PAGE__ = true;\n    window.__INITIAL_CENTRE_ROW__ = ${scriptJson(row)};\n  </script>\n  <script>\n    // Per GitHub Pages`,
+      `  <script type="application/ld+json">${scriptJson(structuredData)}</script>\n  <script type="application/ld+json">${scriptJson(breadcrumbData)}</script>\n  <script>\n    window.__CENTRE_PAGE__ = true;\n    window.__INITIAL_CENTRE_ROW__ = ${scriptJson(row)};\n  </script>\n  <script>\n    // Per GitHub Pages`,
     );
   return html;
 }
@@ -170,13 +168,15 @@ function renderCentrePage(row) {
 function renderErrorPage(status, title, message) {
   const safeTitle = escapeHtml(title);
   const safeMessage = escapeHtml(message);
-  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${safeTitle} | Fitxa centres educatius</title><link rel="stylesheet" href="/css/fitxa-centre.css"></head><body><main class="container"><header class="site-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Fitxa centres educatius</span></a></header><section class="route-error"><p class="centre-kicker">Error ${status}</p><h1>${safeTitle}</h1><p>${safeMessage}</p><a class="route-error-link" href="/">Torna al cercador</a></section></main></body></html>`;
+  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"><meta name="robots" content="noindex"><title>${safeTitle} | Fitxa centres educatius</title><link rel="stylesheet" href="/css/fitxa-centre.css"></head><body><main class="container"><header class="site-header"><a class="brand" href="/"><span class="brand-mark" aria-hidden="true"></span><span>Fitxa centres educatius</span></a></header><section class="route-error"><p class="centre-kicker">Error ${status}</p><h1>${safeTitle}</h1><p>${safeMessage}</p><a class="route-error-link" href="/">Torna al cercador</a></section>${siteFooterHtml()}</main></body></html>`;
 }
 
 export default {
   async fetch(request) {
     const url = new URL(request.url);
-    const code = String(url.searchParams.get("code") ?? "").trim();
+    const routeValue = String(url.searchParams.get("centre") ?? url.searchParams.get("code") ?? "").trim();
+    const routeMatch = routeValue.match(/^(\d{8})(?:-|$)/);
+    const code = routeMatch?.[1] || "";
     if (!/^\d{8}$/.test(code)) {
       return new Response(renderErrorPage(400, "Codi de centre no vàlid", "El codi del centre ha de tenir 8 dígits."), {
         status: 400,
@@ -190,6 +190,14 @@ export default {
         return new Response(renderErrorPage(404, "Centre no trobat", "No s’ha trobat cap centre actual amb aquest codi."), {
           status: 404,
           headers: { "Content-Type": "text/html; charset=utf-8", "Cache-Control": "no-store" },
+        });
+      }
+      const canonicalPath = centrePath(row);
+      const canonicalRouteValue = canonicalPath.split("/").filter(Boolean).at(-1);
+      if (routeValue !== canonicalRouteValue) {
+        return new Response(null, {
+          status: 301,
+          headers: { Location: `${SITE_URL}${canonicalPath}`, "Cache-Control": "public, max-age=3600" },
         });
       }
       return new Response(renderCentrePage(row), {

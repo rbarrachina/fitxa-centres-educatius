@@ -5,20 +5,66 @@
   "functions": {
     "api/centre.mjs": {
       "includeFiles": "web/**"
+    },
+    "api/home.mjs": {
+      "includeFiles": "web/**"
     }
   },
+  "redirects": [
+    {
+      "source": "/centre/:centre",
+      "destination": "/centre/:centre/",
+      "statusCode": 301
+    },
+    {
+      "source": "/centres",
+      "destination": "/centres/",
+      "statusCode": 301
+    },
+    {
+      "source": "/municipis",
+      "destination": "/municipis/",
+      "statusCode": 301
+    },
+    {
+      "source": "/centres/:area",
+      "destination": "/centres/:area/",
+      "statusCode": 301
+    },
+    {
+      "source": "/centres/:area/:municipi",
+      "destination": "/centres/:area/:municipi/",
+      "statusCode": 301
+    }
+  ],
   "rewrites": [
+    {
+      "source": "/",
+      "destination": "/api/home"
+    },
     {
       "source": "/sitemap.xml",
       "destination": "/api/sitemap"
     },
     {
-      "source": "/centre/:code",
+      "source": "/centre/:centre/",
       "destination": "/api/centre"
     },
     {
-      "source": "/centre/:code/",
-      "destination": "/api/centre"
+      "source": "/centres/",
+      "destination": "/api/directori"
+    },
+    {
+      "source": "/municipis/",
+      "destination": "/api/directori?view=municipis"
+    },
+    {
+      "source": "/centres/:area/",
+      "destination": "/api/directori"
+    },
+    {
+      "source": "/centres/:area/:municipi/",
+      "destination": "/api/directori"
     }
   ]
 }

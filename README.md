@@ -5,7 +5,11 @@ Aplicació web per consultar fitxes de centres educatius de Catalunya i visualit
 ## Funcionalitats
 
 - Cerca per codi de centre (8 dígits), nom del centre o municipi.
-- Pàgina pròpia per a cada centre amb URL estable basada només en el codi: `/centre/XXXXXXXX/`.
+- Pàgina pròpia per a cada centre amb URL descriptiva formada per codi, nom i població: `/centre/XXXXXXXX-nom-centre-poblacio/`.
+- Redirecció permanent de les antigues URLs basades només en el codi cap a la URL descriptiva canònica.
+- Directori SEO navegable amb la jerarquia Catalunya → àrea territorial → municipi → centre.
+- Índex alfabètic de tots els municipis a `/municipis/`, amb enllaços HTML cap a les pàgines municipals canòniques.
+- Breadcrumbs visibles i dades estructurades `BreadcrumbList` a les pàgines del directori i a les fitxes.
 - L'antic paràmetre `?codi=XXXXXXXX` redirigeix a la nova URL de la fitxa.
 - Selecció de centre quan hi ha múltiples coincidències.
 - Quan una cerca només té una coincidència, s'obre directament la pàgina pròpia del centre.
@@ -83,16 +87,18 @@ Els canvis de presentació es concentren principalment en:
 - Pàgina: `web/index.html`.
 - Entrada d'arrel per desenvolupament local: `index.html`, que redirigeix a `web/`.
 
-### Pàgines de centre a Vercel
+### Pàgines de centre i directori territorial a Vercel
 
 - Funció: `api/centre.mjs`.
-- Ruta pública: `/centre/:code/`.
+- Ruta pública: `/centre/:code-:nom-:poblacio/`.
 - La funció consulta el dataset de centres en cada visita i retorna una resposta HTML que ja conté el nom, les metadades i les dades principals del centre.
 - La resposta utilitza `Cache-Control: no-store`; no es conserva una còpia fixa de la fitxa.
 - El JavaScript completa després les accions, els mapes, la matrícula i les especialitats docents mantenint la mateixa taula i el mateix disseny de la cerca actual.
 - Un codi inexistent retorna `404`; una incidència temporal de Dades Obertes retorna `503`.
-- `api/sitemap.mjs` genera el `sitemap.xml` amb la portada i tots els codis del curs actual. El sitemap es pot conservar temporalment a la CDN durant una hora, però les pàgines de centre continuen consultant les dades en directe.
-- No hi ha cap directori o catàleg alternatiu: el cercador continua sent l'única navegació visible pels centres.
+- `api/directori.mjs` genera pàgines HTML per a Catalunya, cada àrea territorial i cada municipi, amb llistes completes d’enllaços rastrejables.
+- `api/home.mjs` incorpora a la portada l’exploració per àrea territorial.
+- La portada manté dos accessos compactes al directori d’àrees territorials i a l’índex de municipis, sense desplegar-hi les llistes completes.
+- `api/sitemap.mjs` genera el `sitemap.xml` amb la portada, el directori, les àrees territorials, els municipis i les fitxes descriptives del curs actual.
 
 ### Backend (opcional)
 
@@ -125,7 +131,7 @@ npm run serve
 
 En el desplegament de Vercel, es pot obrir directament una fitxa concreta amb el codi de centre de 8 dígits:
 
-`https://fitxa-centres.vercel.app/centre/08012345/`
+`https://fitxa-centres.vercel.app/centre/08012345-institut-exemple-sabadell/`
 
 ## Modes d'execució
 
@@ -139,8 +145,10 @@ El fitxer `vercel.json` configura Vercel perquè:
 
 - executi `npm run build` a cada desplegament;
 - publiqui la carpeta estàtica `web`;
-- reescrigui `/centre/:code/` cap a la funció que genera l'HTML de la fitxa;
-- serveixi un sitemap dinàmic amb totes les fitxes del curs actual;
+- reescrigui `/centre/:centre/` cap a la funció que genera l'HTML de la fitxa i redirigeixi els slugs antics;
+- serveixi el directori territorial a `/centres/`, `/centres/:area/` i `/centres/:area/:municipi/`;
+- serveixi l’índex alfabètic de municipis a `/municipis/`;
+- serveixi un sitemap dinàmic amb totes les pàgines canòniques del curs actual;
 - generi automàticament un nou desplegament quan la integració de GitHub detecti canvis al repositori.
 
 La branca de producció és `main`. Les altres branques poden generar desplegaments de previsualització des de Vercel.
