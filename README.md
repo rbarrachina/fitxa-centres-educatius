@@ -97,6 +97,8 @@ Els canvis de presentació es concentren principalment en:
 - Un codi inexistent retorna `404`; una incidència temporal de Dades Obertes retorna `503`.
 - `api/directori.mjs` genera pàgines HTML per a Catalunya, cada àrea territorial i cada municipi, amb llistes completes d’enllaços rastrejables.
 - `web/index.html` incorpora directament els dos accessos compactes al directori d’àrees territorials i a l’índex de municipis, sense desplegar-hi les llistes completes.
+- La portada declara dades estructurades `WebSite` perquè Google identifiqui el nom, l’idioma i la URL canònica del projecte.
+- Cada fitxa declara `EducationalOrganization` amb un identificador estable, la pàgina principal de l’entitat i les dades reals disponibles de contacte, web, adreça i geolocalització.
 - `api/home.mjs` serveix la mateixa portada estàtica en el servidor local de desenvolupament.
 - `api/sitemap.mjs` genera el `sitemap.xml` amb la portada, el directori, les àrees territorials, els municipis i les fitxes descriptives del curs actual.
 

@@ -18,6 +18,8 @@ const centreRow = {
   url: "http://institutxxvolimpiada.cat/",
   tel_fon: "932890630",
   adre_a: "c. Dàlia, s/n",
+  coordenades_geo_x: "2.1483",
+  coordenades_geo_y: "41.3712",
   nom_municipi: "Barcelona",
   codi_postal: "08004",
   nom_delegaci: "Consorci d'Educació de Barcelona",
@@ -31,6 +33,10 @@ function jsonResponse(data, status = 200) {
     status,
     headers: { "Content-Type": "application/json" },
   });
+}
+
+function structuredDataItems(html) {
+  return Array.from(html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g), (match) => JSON.parse(match[1]));
 }
 
 test("la pàgina de centre canònica retorna HTML complet, metadades i breadcrumbs", async () => {
@@ -61,6 +67,13 @@ test("la pàgina de centre canònica retorna HTML complet, metadades i breadcrum
     assert.match(html, /<th>Codi centre<\/th><td>08047431<\/td>/);
     assert.match(html, /window\.__INITIAL_CENTRE_ROW__/);
     assert.doesNotMatch(html, /<table id="resultTable" class="hidden">/);
+    const organization = structuredDataItems(html).find((item) => item["@type"] === "EducationalOrganization");
+    assert.equal(organization["@id"], "https://fitxa-centres.vercel.app/centre/08047431-institut-xxv-olimpiada-barcelona/#centre");
+    assert.deepEqual(organization.identifier, { "@type": "PropertyValue", propertyID: "Codi de centre", value: "08047431" });
+    assert.equal(organization.mainEntityOfPage["@id"], "https://fitxa-centres.vercel.app/centre/08047431-institut-xxv-olimpiada-barcelona/");
+    assert.equal(organization.url, "http://institutxxvolimpiada.cat/");
+    assert.deepEqual(organization.sameAs, ["http://institutxxvolimpiada.cat/"]);
+    assert.deepEqual(organization.geo, { "@type": "GeoCoordinates", latitude: 41.3712, longitude: 2.1483 });
   } finally {
     globalThis.fetch = originalFetch;
   }
@@ -204,6 +217,11 @@ test("la portada incorpora l’exploració per àrea territorial", async () => {
     assert.match(html, /href="\/centres\/"/);
     assert.match(html, /href="\/municipis\/"/);
     assert.doesNotMatch(html, /href="\/centres\/consorci-d-educacio-de-barcelona\/"/);
+    const website = structuredDataItems(html).find((item) => item["@type"] === "WebSite");
+    assert.equal(website["@id"], "https://fitxa-centres.vercel.app/#website");
+    assert.equal(website.name, "Fitxa centres educatius");
+    assert.equal(website.alternateName, "Fitxa Centres");
+    assert.equal(website.inLanguage, "ca");
   } finally {
     globalThis.fetch = originalFetch;
   }

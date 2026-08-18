@@ -28,6 +28,27 @@ function text(row, key, fallback = "-") {
   return value || fallback;
 }
 
+function optionalText(row, key) {
+  const value = String(row?.[key] ?? "").trim();
+  return value && value !== "-" ? value : "";
+}
+
+function websiteUrl(value) {
+  const raw = String(value ?? "").trim();
+  if (!raw || raw === "-") return "";
+  try {
+    const url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw}`);
+    return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+  } catch {
+    return "";
+  }
+}
+
+function coordinate(value) {
+  const numeric = Number(String(value ?? "").trim().replace(",", "."));
+  return Number.isFinite(numeric) ? numeric : null;
+}
+
 function tableRow(label, value) {
   return `<tr><th>${escapeHtml(label)}</th><td>${escapeHtml(value)}</td></tr>`;
 }
@@ -113,6 +134,11 @@ function renderCentrePage(row) {
   const municipality = text(row, "nom_municipi", "Catalunya");
   const area = text(row, "nom_delegaci", "Catalunya");
   const canonicalUrl = `${SITE_URL}${centrePath(row)}`;
+  const officialWebsite = websiteUrl(optionalText(row, "url"));
+  const email = optionalText(row, "e_mail_centre");
+  const telephone = optionalText(row, "tel_fon");
+  const latitude = coordinate(row.coordenades_geo_y);
+  const longitude = coordinate(row.coordenades_geo_x);
   const areaUrl = `/centres/${slugify(area)}/`;
   const municipalityUrl = `${areaUrl}${slugify(municipality)}/`;
   const centreHero = `
@@ -134,19 +160,32 @@ function renderCentrePage(row) {
   const structuredData = {
     "@context": "https://schema.org",
     "@type": "EducationalOrganization",
+    "@id": `${canonicalUrl}#centre`,
     name,
-    identifier: code,
+    identifier: {
+      "@type": "PropertyValue",
+      propertyID: "Codi de centre",
+      value: code,
+    },
+    mainEntityOfPage: {
+      "@type": "WebPage",
+      "@id": canonicalUrl,
+    },
     address: {
       "@type": "PostalAddress",
-      streetAddress: text(row, "adre_a", ""),
+      ...(optionalText(row, "adre_a") ? { streetAddress: optionalText(row, "adre_a") } : {}),
       addressLocality: municipality,
-      postalCode: text(row, "codi_postal", ""),
+      ...(optionalText(row, "codi_postal") ? { postalCode: optionalText(row, "codi_postal") } : {}),
       addressRegion: "Catalunya",
       addressCountry: "ES",
     },
-    telephone: text(row, "tel_fon", ""),
-    email: text(row, "e_mail_centre", ""),
-    url: canonicalUrl,
+    url: officialWebsite || canonicalUrl,
+    ...(officialWebsite ? { sameAs: [officialWebsite] } : {}),
+    ...(telephone ? { telephone } : {}),
+    ...(email && email.includes("@") ? { email } : {}),
+    ...(latitude !== null && longitude !== null && Math.abs(latitude) <= 90 && Math.abs(longitude) <= 180
+      ? { geo: { "@type": "GeoCoordinates", latitude, longitude } }
+      : {}),
   };
 
   let html = replaceMeta(template, row, canonicalUrl)
