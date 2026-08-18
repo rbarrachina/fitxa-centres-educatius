@@ -3,6 +3,9 @@
     const apiBase = String(appWindow.MAPES_API_BASE || "")
         .trim()
         .replace(/\/+$/, "");
+    const isGitHubPages = window.location.hostname.endsWith(".github.io") || window.location.pathname.startsWith("/fitxa-centres-educatius/");
+    const appBasePath = isGitHubPages ? "/fitxa-centres-educatius" : "";
+    const appPath = (path) => `${appBasePath}${path.startsWith("/") ? path : `/${path}`}`;
     const isCentrePage = Boolean(appWindow.__CENTRE_PAGE__);
     const initialCentreRow = appWindow.__INITIAL_CENTRE_ROW__ || null;
     const SOCRATA_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/kvmv-ahh4.json";
@@ -14,8 +17,8 @@
     const TEACHING_STAFF_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/Educaci-/Personal-docent-en-centres-p-blics-titularitat-del/2ip7-jdgh/about_data";
     const TEACHING_STAFF_SPECIALTIES_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/4fid-p2hv.json";
     const TEACHING_STAFF_SPECIALTIES_SOURCE_URL = "https://analisi.transparenciacatalunya.cat/Educaci-/Plantilles-del-personal-docent-dels-centres-p-blic/4fid-p2hv";
-    const EDUCATIONAL_SERVICES_URL = "/data/serveis-educatius.json";
-    const TERRITORIAL_SERVICES_URL = "/data/serveis-territorials-simplificat.geojson";
+    const EDUCATIONAL_SERVICES_URL = appPath("/data/serveis-educatius.json");
+    const TERRITORIAL_SERVICES_URL = appPath("/data/serveis-territorials-simplificat.geojson");
     const COMARQUES_URL = "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson";
     const MUNICIPIS_QUERY_URL = "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query";
     const BARCELONA_DISTRICTS_URL = "https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download";
@@ -2006,6 +2009,8 @@
         };
         const centreUrl = (row) => {
             const code = asText(row.codi_centre).trim();
+            if (appBasePath)
+                return `${appBasePath}/?codi=${encodeURIComponent(code)}`;
             const descriptive = slugify(`${asText(row.denominaci_completa)}-${asText(row.nom_municipi)}`);
             return `/centre/${encodeURIComponent(descriptive ? `${code}-${descriptive}` : code)}/`;
         };
@@ -2013,7 +2018,7 @@
             window.location.assign(centreUrl(row));
         };
         const navigateToHomepageWithoutResults = (query) => {
-            const url = new URL("/", window.location.origin);
+            const url = new URL(appPath("/"), window.location.origin);
             url.searchParams.set("cerca", query);
             url.searchParams.set("resultat", "cap");
             window.location.assign(`${url.pathname}${url.search}`);
@@ -2022,7 +2027,7 @@
             if (isCentrePage)
                 return;
             const url = new URL(window.location.href);
-            url.pathname = "/";
+            url.pathname = appPath("/");
             url.search = "";
             url.searchParams.set("cerca", query);
             window.history.replaceState({ centreSearchQuery: query, restoreSearch: true }, "", `${url.pathname}${url.search}`);
@@ -2065,7 +2070,7 @@
                 if (!normalizedArea.includes(needle))
                     return;
                 const relevance = normalizedArea === needle ? 0 : normalizedArea.startsWith(needle) ? 1 : 2;
-                matches.push({ kind: "area", name: area, context: "Àrea territorial", url: `/centres/${slugify(area)}/`, relevance });
+                matches.push({ kind: "area", name: area, context: "Àrea territorial", url: appPath(`/centres/${slugify(area)}/`), relevance });
             });
             municipalities.forEach((municipality) => {
                 const normalizedMunicipality = normalizePlaceName(municipality.name);
@@ -2076,7 +2081,7 @@
                     kind: "municipality",
                     name: municipality.name,
                     context: municipality.area,
-                    url: `/centres/${slugify(municipality.area)}/${slugify(municipality.name)}/`,
+                    url: appPath(`/centres/${slugify(municipality.area)}/${slugify(municipality.name)}/`),
                     relevance,
                 });
             });
@@ -2119,6 +2124,12 @@
                             scrollSearchIntoView();
                             return;
                         }
+                        if (appBasePath) {
+                            await renderData(await attachEducationalService(rowToFitxaData(query, selected), selected));
+                            setMessage("");
+                            scrollSearchIntoView();
+                            return;
+                        }
                         navigateToCentre(selected);
                         return;
                     }
@@ -2137,7 +2148,7 @@
                     }
                     if (directoryMatches.length) {
                         if (isCentrePage) {
-                            window.location.assign(`/?cerca=${encodeURIComponent(query)}`);
+                            window.location.assign(`${appPath("/")}?cerca=${encodeURIComponent(query)}`);
                             return;
                         }
                         renderMatchChooser(matches, directoryMatches);
@@ -2156,7 +2167,7 @@
                         return;
                     }
                     if (isCentrePage) {
-                        window.location.assign(`/?cerca=${encodeURIComponent(query)}`);
+                        window.location.assign(`${appPath("/")}?cerca=${encodeURIComponent(query)}`);
                         return;
                     }
                     renderMatchChooser(matches);

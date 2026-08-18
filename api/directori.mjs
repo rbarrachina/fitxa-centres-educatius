@@ -109,7 +109,7 @@ function pageShell({ title, description, canonicalPath, breadcrumbs, content, st
 </html>`;
 }
 
-function renderCatalunya(centres) {
+export function renderCatalunya(centres) {
   const areaGroups = new Map();
   const municipalityKeys = new Set();
   for (const centre of centres) {
@@ -134,7 +134,7 @@ function renderCatalunya(centres) {
   });
 }
 
-function renderMunicipalityIndex(centres) {
+export function renderMunicipalityIndex(centres) {
   const municipalityMap = new Map();
   for (const centre of centres) {
     const area = String(centre.nom_delegaci ?? "").trim();
@@ -174,7 +174,7 @@ function renderMunicipalityIndex(centres) {
   });
 }
 
-function renderArea(centres, area) {
+export function renderArea(centres, area) {
   const areaCentres = centres.filter((row) => String(row.nom_delegaci ?? "").trim() === area);
   const municipalities = new Map();
   for (const centre of areaCentres) {
@@ -198,7 +198,7 @@ function renderArea(centres, area) {
   });
 }
 
-function renderMunicipality(centres, area, municipality) {
+export function renderMunicipality(centres, area, municipality) {
   const rows = centres.filter((row) =>
     String(row.nom_delegaci ?? "").trim() === area && String(row.nom_municipi ?? "").trim() === municipality
   ).sort((a, b) => compareNames(a.denominaci_completa, b.denominaci_completa));

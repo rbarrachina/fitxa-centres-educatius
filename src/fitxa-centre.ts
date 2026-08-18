@@ -28,6 +28,9 @@
   const apiBase = String(appWindow.MAPES_API_BASE || "")
     .trim()
     .replace(/\/+$/, "");
+  const isGitHubPages = window.location.hostname.endsWith(".github.io") || window.location.pathname.startsWith("/fitxa-centres-educatius/");
+  const appBasePath = isGitHubPages ? "/fitxa-centres-educatius" : "";
+  const appPath = (path: string): string => `${appBasePath}${path.startsWith("/") ? path : `/${path}`}`;
   const isCentrePage = Boolean(appWindow.__CENTRE_PAGE__);
   const initialCentreRow = appWindow.__INITIAL_CENTRE_ROW__ || null;
 
@@ -43,8 +46,8 @@
   const TEACHING_STAFF_SPECIALTIES_RESOURCE_URL = "https://analisi.transparenciacatalunya.cat/resource/4fid-p2hv.json";
   const TEACHING_STAFF_SPECIALTIES_SOURCE_URL =
     "https://analisi.transparenciacatalunya.cat/Educaci-/Plantilles-del-personal-docent-dels-centres-p-blic/4fid-p2hv";
-  const EDUCATIONAL_SERVICES_URL = "/data/serveis-educatius.json";
-  const TERRITORIAL_SERVICES_URL = "/data/serveis-territorials-simplificat.geojson";
+  const EDUCATIONAL_SERVICES_URL = appPath("/data/serveis-educatius.json");
+  const TERRITORIAL_SERVICES_URL = appPath("/data/serveis-territorials-simplificat.geojson");
   const COMARQUES_URL =
     "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/5/query?where=1%3D1&outFields=NOM_COMAR&outSR=4326&f=geojson";
   const MUNICIPIS_QUERY_URL =
@@ -2104,6 +2107,7 @@
 
       const centreUrl = (row: SocrataRow): string => {
         const code = asText(row.codi_centre).trim();
+        if (appBasePath) return `${appBasePath}/?codi=${encodeURIComponent(code)}`;
         const descriptive = slugify(`${asText(row.denominaci_completa)}-${asText(row.nom_municipi)}`);
         return `/centre/${encodeURIComponent(descriptive ? `${code}-${descriptive}` : code)}/`;
       };
@@ -2113,7 +2117,7 @@
       };
 
       const navigateToHomepageWithoutResults = (query: string): void => {
-        const url = new URL("/", window.location.origin);
+        const url = new URL(appPath("/"), window.location.origin);
         url.searchParams.set("cerca", query);
         url.searchParams.set("resultat", "cap");
         window.location.assign(`${url.pathname}${url.search}`);
@@ -2122,7 +2126,7 @@
       const rememberHomepageSearch = (query: string): void => {
         if (isCentrePage) return;
         const url = new URL(window.location.href);
-        url.pathname = "/";
+        url.pathname = appPath("/");
         url.search = "";
         url.searchParams.set("cerca", query);
         window.history.replaceState({ centreSearchQuery: query, restoreSearch: true }, "", `${url.pathname}${url.search}`);
@@ -2165,7 +2169,7 @@
         areas.forEach((area, normalizedArea) => {
           if (!normalizedArea.includes(needle)) return;
           const relevance = normalizedArea === needle ? 0 : normalizedArea.startsWith(needle) ? 1 : 2;
-          matches.push({ kind: "area", name: area, context: "Àrea territorial", url: `/centres/${slugify(area)}/`, relevance });
+          matches.push({ kind: "area", name: area, context: "Àrea territorial", url: appPath(`/centres/${slugify(area)}/`), relevance });
         });
         municipalities.forEach((municipality) => {
           const normalizedMunicipality = normalizePlaceName(municipality.name);
@@ -2175,7 +2179,7 @@
             kind: "municipality",
             name: municipality.name,
             context: municipality.area,
-            url: `/centres/${slugify(municipality.area)}/${slugify(municipality.name)}/`,
+            url: appPath(`/centres/${slugify(municipality.area)}/${slugify(municipality.name)}/`),
             relevance,
           });
         });
@@ -2223,6 +2227,12 @@
                 scrollSearchIntoView();
                 return;
               }
+              if (appBasePath) {
+                await renderData(await attachEducationalService(rowToFitxaData(query, selected), selected));
+                setMessage("");
+                scrollSearchIntoView();
+                return;
+              }
               navigateToCentre(selected);
               return;
             }
@@ -2243,7 +2253,7 @@
 
             if (directoryMatches.length) {
               if (isCentrePage) {
-                window.location.assign(`/?cerca=${encodeURIComponent(query)}`);
+                window.location.assign(`${appPath("/")}?cerca=${encodeURIComponent(query)}`);
                 return;
               }
               renderMatchChooser(matches, directoryMatches);
@@ -2264,7 +2274,7 @@
             }
 
             if (isCentrePage) {
-              window.location.assign(`/?cerca=${encodeURIComponent(query)}`);
+              window.location.assign(`${appPath("/")}?cerca=${encodeURIComponent(query)}`);
               return;
             }
 
