@@ -8,6 +8,7 @@ const template = readFileSync(join(process.cwd(), "web", "index.html"), "utf8");
 const searchControls = template.match(
   /<div class="controls">[\s\S]*?<\/div>(?=\s*(?:<nav class="home-explore-links"[\s\S]*?<\/nav>\s*)?<div id="message")/,
 )?.[0] || "";
+const homeExploreLinks = template.match(/\s*<nav class="home-explore-links"[\s\S]*?<\/nav>/)?.[0] || "";
 
 const STUDY_KEYS = [
   "einf1c", "einf2c", "epri", "eso", "batx", "aa01", "cfpm", "ppas", "aa03", "cfps",
@@ -154,6 +155,7 @@ function renderCentrePage(row) {
     .replace("    <section id=\"sectionFitxa\">", `    ${breadcrumbs}\n\n    <section id="sectionFitxa">`)
     .replace(/\s*<div class="hero">[\s\S]*?<\/div>\s*(?=<div class="controls">)/, `\n${centreHero}\n\n      `)
     .replace(searchControls, "")
+    .replace(homeExploreLinks, "")
     .replace(
       '<div class="header-actions">',
       `<div class="centre-header-search" aria-label="Cerca de centres">${searchControls}</div>\n      <div class="header-actions">`,

@@ -54,6 +54,7 @@ test("la pàgina de centre canònica retorna HTML complet, metadades i breadcrum
     assert.match(html, /class="breadcrumbs"/);
     assert.match(html, /<div class="centre-header-search"[^>]*>[\s\S]*?<div class="controls">/);
     assert.doesNotMatch(html, /<div class="centre-header-search"[^>]*><\/div>/);
+    assert.doesNotMatch(html, /home-explore-links/);
     assert.match(html, /"@type":"BreadcrumbList"/);
     assert.match(html, /<th>Codi centre<\/th><td>08047431<\/td>/);
     assert.match(html, /window\.__INITIAL_CENTRE_ROW__/);
