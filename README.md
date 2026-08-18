@@ -96,8 +96,8 @@ Els canvis de presentació es concentren principalment en:
 - El JavaScript completa després les accions, els mapes, la matrícula i les especialitats docents mantenint la mateixa taula i el mateix disseny de la cerca actual.
 - Un codi inexistent retorna `404`; una incidència temporal de Dades Obertes retorna `503`.
 - `api/directori.mjs` genera pàgines HTML per a Catalunya, cada àrea territorial i cada municipi, amb llistes completes d’enllaços rastrejables.
-- `api/home.mjs` incorpora a la portada l’exploració per àrea territorial.
-- La portada manté dos accessos compactes al directori d’àrees territorials i a l’índex de municipis, sense desplegar-hi les llistes completes.
+- `web/index.html` incorpora directament els dos accessos compactes al directori d’àrees territorials i a l’índex de municipis, sense desplegar-hi les llistes completes.
+- `api/home.mjs` serveix la mateixa portada estàtica en el servidor local de desenvolupament.
 - `api/sitemap.mjs` genera el `sitemap.xml` amb la portada, el directori, les àrees territorials, els municipis i les fitxes descriptives del curs actual.
 
 ### Backend (opcional)
