@@ -460,6 +460,10 @@ html[data-theme="dark"] body {
   fill: currentColor;
 }
 
+.footer-linkedin-icon {
+  line-height: 0;
+}
+
 .footer-links {
   display: flex;
   flex-wrap: wrap;
