@@ -183,6 +183,8 @@ test("el directori genera pàgines d’àrea i municipi amb enllaços rastrejabl
     assert.match(areaHtml, /name="cerca"/);
     assert.match(areaHtml, /Llicència AGPL v3\+/);
     assert.match(areaHtml, /Crèdits de tercers/);
+    assert.match(areaHtml, /class="footer-author" href="https:\/\/www\.linkedin\.com\/in\/rafa-barrachina-6814701a\/"/);
+    assert.match(areaHtml, /<span>Rafa Barrachina<\/span>[\s\S]*?<svg[^>]*>[\s\S]*?<\/svg>[\s\S]*?<span aria-hidden="true">·<\/span>[\s\S]*?<span>2026<\/span>/);
 
     const municipalityResponse = await directoriFunction.fetch(new Request("https://example.test/api/directori?area=consorci-d-educacio-de-barcelona&municipi=barcelona"));
     const municipalityHtml = await municipalityResponse.text();

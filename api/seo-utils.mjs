@@ -49,7 +49,12 @@ export function siteFooterHtml() {
       <div class="footer-brand">
         <span class="footer-mark" aria-hidden="true"></span>
         <div class="footer-brand-copy">
-          <span>Rafa Barrachina · 2026</span>
+          <a class="footer-author" href="https://www.linkedin.com/in/rafa-barrachina-6814701a/" target="_blank" rel="me noopener noreferrer" aria-label="Rafa Barrachina a LinkedIn">
+            <span>Rafa Barrachina</span>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M20.45 20.45h-3.56v-5.57c0-1.33-.03-3.04-1.85-3.04-1.85 0-2.14 1.45-2.14 2.94v5.67H9.34V8.99h3.42v1.56h.05c.48-.9 1.64-1.85 3.37-1.85 3.6 0 4.27 2.37 4.27 5.46v6.29ZM5.32 7.42a2.06 2.06 0 1 1 0-4.12 2.06 2.06 0 0 1 0 4.12ZM7.1 20.45H3.54V8.99H7.1v11.46Z" /></svg>
+          </a>
+          <span aria-hidden="true">·</span>
+          <span>2026</span>
         </div>
       </div>
       <nav class="footer-links" aria-label="Informació del projecte">
