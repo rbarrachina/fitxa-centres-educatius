@@ -71,6 +71,8 @@ function pageShell({ title, description, canonicalPath, breadcrumbs, content, st
   <link rel="stylesheet" href="/css/fitxa-centre.css?v=20260818-seo-directori" />
   <script type="application/ld+json">${scriptJson(breadcrumbData)}</script>
   ${structuredData.map((data) => `<script type="application/ld+json">${scriptJson(data)}</script>`).join("\n  ")}
+  <script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script>
+  <script defer src="https://cdn.vercel-insights.com/v1/script.js"></script>
 </head>
 <body class="directory-page">
   <main class="container">
@@ -225,7 +227,7 @@ export function renderMunicipality(centres, area, municipality) {
 }
 
 function errorPage(status, title, message) {
-  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/fitxa-centre.css"></head><body><main class="container"><section class="route-error"><p>Error ${status}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="/centres/">Explora els centres</a></section>${siteFooterHtml()}</main></body></html>`;
+  return `<!doctype html><html lang="ca"><head><meta charset="utf-8"><meta name="robots" content="noindex"><title>${escapeHtml(title)}</title><link rel="icon" href="/favicon.svg" type="image/svg+xml"><link rel="stylesheet" href="/css/fitxa-centre.css"><script>window.va=window.va||function(){(window.vaq=window.vaq||[]).push(arguments);};</script><script defer src="https://cdn.vercel-insights.com/v1/script.js"></script></head><body><main class="container"><section class="route-error"><p>Error ${status}</p><h1>${escapeHtml(title)}</h1><p>${escapeHtml(message)}</p><a href="/centres/">Explora els centres</a></section>${siteFooterHtml()}</main></body></html>`;
 }
 
 export default {
