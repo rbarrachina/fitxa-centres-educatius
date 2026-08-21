@@ -54,6 +54,15 @@
     "https://geoserveis.icgc.cat/vector01/rest/services/rtpc_carrers/MapServer/4/query";
   const BARCELONA_DISTRICTS_URL =
     "https://opendata-ajuntament.barcelona.cat/data/dataset/20170706-districtes-barris/resource/5f8974a7-7937-4b50-acbc-89204d570df9/download";
+  const SEARCH_INDEX_FIELDS = [
+    "any",
+    "curs",
+    "codi_centre",
+    "denominaci_completa",
+    "nom_municipi",
+    "codi_municipi",
+    "nom_delegaci",
+  ].join(", ");
   const LEAFLET_CSS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.css";
   const LEAFLET_JS_URL = "https://unpkg.com/leaflet@1.9.4/dist/leaflet.js";
   const LEAFLET_CSS_INTEGRITY = "sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=";
@@ -467,9 +476,9 @@
     return fields;
   }
 
-  async function fetchSocrataRows(whereClause: string, limit: number): Promise<SocrataRow[]> {
+  async function fetchSocrataRows(whereClause: string, limit: number, selectClause = "*"): Promise<SocrataRow[]> {
     const currentCourse = await getCurrentCourse();
-    const query = `SELECT * WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
+    const query = `SELECT ${selectClause} WHERE curs = '${escapeSoql(currentCourse)}' AND (${whereClause}) ORDER BY any DESC, curs DESC LIMIT ${limit}`;
     const response = await fetch(`${SOCRATA_RESOURCE_URL}?$query=${encodeURIComponent(query)}`);
     const raw = await response.text();
     let rows: any = null;
@@ -493,7 +502,7 @@
 
   async function getCurrentCourseRows(): Promise<SocrataRow[]> {
     if (currentCourseRowsPromise) return currentCourseRowsPromise;
-    currentCourseRowsPromise = fetchSocrataRows("1=1", 10000);
+    currentCourseRowsPromise = fetchSocrataRows("1=1", 10000, SEARCH_INDEX_FIELDS);
     return currentCourseRowsPromise;
   }
 
