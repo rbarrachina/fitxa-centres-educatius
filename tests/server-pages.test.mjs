@@ -5,7 +5,6 @@ import centreFunction from "../api/centre.mjs";
 import directoriFunction from "../api/directori.mjs";
 import homeFunction from "../api/home.mjs";
 import sitemapFunction from "../api/sitemap.mjs";
-import { rewriteForGitHubPages } from "../scripts/build-github-pages.mjs";
 
 const centreRow = {
   curs: "2025/2026",
@@ -227,18 +226,4 @@ test("la portada incorpora l’exploració per àrea territorial", async () => {
   } finally {
     globalThis.fetch = originalFetch;
   }
-});
-
-test("el build de GitHub Pages manté els enllaços dins del projecte", () => {
-  const html = rewriteForGitHubPages(`
-    <a href="/centres/">Àrees</a>
-    <a href="/municipis/">Municipis</a>
-    <a href="/centre/08047431-institut-xxv-olimpiada-barcelona/">Centre</a>
-    <form action="/"></form>
-  `);
-  assert.match(html, /href="\/fitxa-centres-educatius\/centres\/"/);
-  assert.match(html, /href="\/fitxa-centres-educatius\/municipis\/"/);
-  assert.match(html, /href="\/fitxa-centres-educatius\/\?codi=08047431"/);
-  assert.match(html, /action="\/fitxa-centres-educatius\/"/);
-  assert.doesNotMatch(html, /fitxa-centres\.vercel\.app/);
 });

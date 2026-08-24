@@ -202,8 +202,8 @@ function renderCentrePage(row) {
     .replace('<table id="resultTable" class="hidden">', '<table id="resultTable">')
     .replace('<tbody id="resultBody"></tbody>', `<tbody id="resultBody">${initialRows(row)}</tbody>`)
     .replace(
-      "  <script>\n    // Per GitHub Pages",
-      `  <script type="application/ld+json">${scriptJson(structuredData)}</script>\n  <script type="application/ld+json">${scriptJson(breadcrumbData)}</script>\n  <script>\n    window.__CENTRE_PAGE__ = true;\n    window.__INITIAL_CENTRE_ROW__ = ${scriptJson(row)};\n  </script>\n  <script>\n    // Per GitHub Pages`,
+      "  <script>\n    // Backend opcional per al mode estàtic",
+      `  <script type="application/ld+json">${scriptJson(structuredData)}</script>\n  <script type="application/ld+json">${scriptJson(breadcrumbData)}</script>\n  <script>\n    window.__CENTRE_PAGE__ = true;\n    window.__INITIAL_CENTRE_ROW__ = ${scriptJson(row)};\n  </script>\n  <script>\n    // Backend opcional per al mode estàtic`,
     );
   return html;
 }
