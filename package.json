@@ -4,7 +4,6 @@
   "description": "Aplicacio inicial per carregar la fitxa de centres educatius des del portal de la Generalitat a partir del codi de centre.",
   "scripts": {
     "build": "tsc -p tsconfig.json",
-    "build:github-pages": "npm run build && node scripts/build-github-pages.mjs",
     "build:watch": "tsc -p tsconfig.json --watch",
     "build:serveis-educatius": "python3 scripts/build_serveis_educatius.py",
     "test": "node --test tests/*.test.mjs",

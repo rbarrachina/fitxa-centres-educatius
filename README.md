@@ -155,17 +155,6 @@ El fitxer `vercel.json` configura Vercel perquè:
 
 La branca de producció és `main`. Les altres branques poden generar desplegaments de previsualització des de Vercel.
 
-## Desplegament a GitHub Pages
-
-El workflow `.github/workflows/pages.yml` executa `npm run build:github-pages`. Aquest build:
-
-- publica la portada i els recursos estàtics sota `/fitxa-centres-educatius/`;
-- genera una còpia estàtica dels directoris de Catalunya, les àrees territorials i els municipis;
-- manté tots els enllaços del directori dins del domini de GitHub Pages;
-- obre les fitxes dels centres al cercador estàtic de GitHub mitjançant el paràmetre `codi`.
-
-Vercel continua generant les seves pàgines dinàmiques amb URLs pròpies i no comparteix enllaços de navegació amb GitHub Pages.
-
 ## Desenvolupament
 
 - Qualsevol canvi a `src/fitxa-centre.ts` requereix recompilar:
