@@ -1037,7 +1037,7 @@
         const row = (label, value) => `<tr><th>${escapeHtml(label)}</th><td>${buildCellValue(label, value)}</td></tr>`;
         const buildCodeRow = (codeValue) => {
             const codeSafe = escapeHtml(codeValue || "");
-            return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
+            return `<tr><th>Codi centre</th><td><div class="coord-with-map"><span>${codeSafe}</span><button class="copy-btn" data-copy="${codeSafe}" data-copy-message="Codi de centre copiat al porta-retalls." type="button">${actionIcons.copy}<span>Copiar</span></button></div></td></tr>`;
         };
         const buildCodesButtonRow = () => `<tr><th>Codis</th><td><button class="codes-btn" type="button" aria-expanded="false" aria-label="Veure codis" title="Veure codis" data-collapsed-label="Veure codis" data-expanded-label="Plegar codis">${actionIcons.codes}<span>Veure codis</span>${expandToggleIcon}</button></td></tr>`;
         const buildEnrollmentButtonRow = (studiesValue) => {

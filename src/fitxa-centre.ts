@@ -1092,7 +1092,7 @@
 
       const buildCodeRow = (codeValue: string): string => {
         const codeSafe = escapeHtml(codeValue || "");
-        return `<tr><th>Codi centre</th><td>${codeSafe}</td></tr>`;
+        return `<tr><th>Codi centre</th><td><div class="coord-with-map"><span>${codeSafe}</span><button class="copy-btn" data-copy="${codeSafe}" data-copy-message="Codi de centre copiat al porta-retalls." type="button">${actionIcons.copy}<span>Copiar</span></button></div></td></tr>`;
       };
 
       const buildCodesButtonRow = (): string =>
