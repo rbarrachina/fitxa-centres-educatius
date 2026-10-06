@@ -1061,12 +1061,13 @@
                 ? `<button class="educational-service-map-btn" aria-label="Veure mapa" title="Veure mapa" aria-expanded="false" data-centre-name="${centreName}" data-centre-x="${centreX}" data-centre-y="${centreY}" type="button">${mapButtonContent}</button>`
                 : "";
             const webUrl = normalizeWebUrl(service?.web || "");
+            const advisorsButton = `<button class="web-btn" data-open-url="https://espai.educacio.gencat.cat/Recursos/Solucions-suport-TIC/qui-som/Assessors-Cultura-Digital/Pagines/default.aspx" type="button">${actionIcons.globe}<span>Assessors i Gestors</span></button>`;
             if (!webUrl) {
-                return `<tr><th>Servei educatiu</th><td><div class="coord-with-map"><span>${safeName}</span>${mapButton}</div></td></tr>`;
+                return `<tr><th>Servei educatiu</th><td><div class="coord-with-map educational-service-actions"><span>${safeName}</span>${mapButton}${advisorsButton}</div></td></tr>`;
             }
             const normalizedUrl = /^https?:\/\//i.test(webUrl) ? webUrl : `http://${webUrl}`;
             const safeOpenUrl = escapeHtml(normalizedUrl);
-            return `<tr><th>Servei educatiu</th><td><div class="coord-with-map educational-service-actions"><span>${safeName}</span>${mapButton}<button class="web-btn web-se-btn" data-open-url="${safeOpenUrl}" type="button">${actionIcons.globe}<span>Web SE</span></button></div></td></tr>`;
+            return `<tr><th>Servei educatiu</th><td><div class="coord-with-map educational-service-actions"><span>${safeName}</span>${mapButton}<button class="web-btn web-se-btn" data-open-url="${safeOpenUrl}" type="button">${actionIcons.globe}<span>Web SE</span></button>${advisorsButton}</div></td></tr>`;
         };
         const closeCodesModal = () => {
             codesModalBackdrop.classList.add("hidden");
