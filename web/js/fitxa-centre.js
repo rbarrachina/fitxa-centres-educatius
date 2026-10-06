@@ -993,6 +993,9 @@
             const phoneNumber = isPhoneField ? normalizePhoneNumber(safeValue) : "";
             const webUrl = isWebField ? normalizeWebUrl(safeValue) : "";
             const escaped = escapeHtml(safeValue);
+            if (normalizeText(label) === "nom centre" && safeValue) {
+                return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" data-copy-message="Nom del centre copiat al porta-retalls." type="button" aria-label="Copiar el nom del centre">${actionIcons.copy}<span>Copiar</span></button></div>`;
+            }
             if (isEmailField) {
                 return `<div class="coord-with-map"><span>${escaped}</span><button class="copy-btn" data-copy="${escaped}" data-copy-message="Correu copiat al porta-retalls." type="button">${actionIcons.copy}<span>Copiar</span></button></div>`;
             }
